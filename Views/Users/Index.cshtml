@@ -1,0 +1,73 @@
+@model List<CostAccounting.Models.UserIndexVM>
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<h3>User Management</h3>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<a asp-action="Create" class="btn btn-primary mb-3">+ New User</a>
+
+<form id="antiForgeryForm">@Html.AntiForgeryToken()</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Full Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Active</th>
+            <th>Last Login</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var u in Model)
+        {
+            <tr>
+                <td>@u.Username</td>
+                <td>@u.FullName</td>
+                <td>@u.Email</td>
+                <td>@u.Role</td>
+                <td>@(u.Active ? "Yes" : "No")</td>
+                <td>@(u.LastLoginDate?.ToString("g") ?? "Never")</td>
+                <td>
+                    <button class="btn btn-sm btn-warning reset-pwd-btn"
+                            data-id="@u.ObjectID" data-username="@u.Username">
+                        Reset Password
+                    </button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.reset-pwd-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const newPassword = prompt(`New password for ${btn.dataset.username}:`);
+                if (!newPassword) return;
+
+                const params = new URLSearchParams();
+                params.append('targetUserObjectID', btn.dataset.id);
+                params.append('newPassword', newPassword);
+                params.append('__RequestVerificationToken',
+                    document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]').value);
+
+                const res = await fetch('/Users/ResetPassword', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params
+                });
+                const data = await res.json();
+                alert(data.message);
+            });
+        });
+    </script>
+}

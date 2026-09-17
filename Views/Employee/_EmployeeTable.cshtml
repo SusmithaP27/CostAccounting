@@ -1,0 +1,384 @@
+@model CostAccounting.Models.EmployeeIndexVM
+
+@functions {
+    string SortIcon(string field, string currentField, string dir)
+        => field == currentField
+            ? (dir == "asc" ? "bi-caret-up-fill" : "bi-caret-down-fill")
+            : "bi-caret-down";
+
+    string NextDir(string field, string currentField, string dir)
+        => field == currentField && dir == "asc"
+            ? "desc"
+            : "asc";
+}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                
+
+                <th class="sortable"
+                    data-field="Code"
+                    data-dir="@NextDir("Code", Model.SortField, Model.SortDirection)">
+                    Code
+                    <i class="bi @SortIcon("Code", Model.SortField, Model.SortDirection)"></i>
+                </th>
+
+                <th class="sortable"
+                    data-field="LastName"
+                    data-dir="@NextDir("LastName", Model.SortField, Model.SortDirection)">
+                    Name
+                    <i class="bi @SortIcon("LastName", Model.SortField, Model.SortDirection)"></i>
+                </th>
+
+                
+                <th class="sortable"
+                    data-field="HireDate"
+                    data-dir="@NextDir("HireDate", Model.SortField, Model.SortDirection)">
+                    Hire Date
+                    <i class="bi @SortIcon("HireDate", Model.SortField, Model.SortDirection)"></i>
+                </th>
+
+                <th>Status</th>
+
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (!Model.Employees.Any())
+            {
+                <tr>
+                    <td colspan="8"
+                        class="text-center text-muted py-4">
+                        No employees found.
+                    </td>
+                </tr>
+            }
+
+            @foreach (var e in Model.Employees)
+            {
+                <tr data-id="@e.ObjectID">
+
+                    
+                    <td>
+                        <span class="cell-view">
+                            @e.Code
+                        </span>
+
+                        <input type="text"
+                               class="form-control form-control-sm cell-input d-none"
+                               data-field="Code"
+                               value="@e.Code" />
+                    </td>
+
+                    <td>
+                        <span class="cell-view">
+                            @e.LastName, @e.FirstName @e.MI
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="cell-view">
+                            @(e.HireDate?.ToString("MM/dd/yyyy"))
+                        </span>
+
+                        <input type="date"
+                               class="form-control form-control-sm cell-input d-none"
+                               data-field="HireDate"
+                               value="@(e.HireDate?.ToString("yyyy-MM-dd"))" />
+                    </td>
+
+                    <td>
+                        @if (e.Active)
+                        {
+                            <span class="badge bg-success">
+                                Active
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">
+                                Inactive
+                            </span>
+                        }
+                    </td>
+
+                    <td class="text-end">
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary btn-edit-row"
+                                title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-success btn-save-row d-none"
+                                title="Save">
+                            <i class="bi bi-check-lg"></i>
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary btn-cancel-row d-none"
+                                title="Cancel">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+
+                        
+
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger btn-delete-employee"
+                                data-id="@e.ObjectID"
+                                data-name="@(e.LastName + ", " + e.FirstName)"
+                                title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="card-footer d-flex justify-content-between align-items-center">
+
+    <span class="text-muted">
+        @if (Model.TotalCount > 0)
+        {
+            <text>
+                Showing
+                @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount))
+                of @Model.TotalCount
+            </text>
+        }
+        else
+        {
+            <text>Showing 0 of 0</text>
+        }
+    </span>
+
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link page-link-nav"
+                   href="#"
+                   data-page="@(Model.Page - 1)">
+                    Previous
+                </a>
+            </li>
+
+            @for (int p = 1; p <= Model.TotalPages; p++)
+            {
+                <li class="page-item @(p == Model.Page ? "active" : "")">
+                    <a class="page-link page-link-nav"
+                       href="#"
+                       data-page="@p">
+                        @p
+                    </a>
+                </li>
+            }
+
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link page-link-nav"
+                   href="#"
+                   data-page="@(Model.Page + 1)">
+                    Next
+                </a>
+            </li>
+
+        </ul>
+    </nav>
+</div>
+
+<script>
+(function () {
+
+    const container =
+        document.getElementById('employeeTableContainer');
+
+    if (!container || container.dataset.wired) {
+        return;
+    }
+
+    container.dataset.wired = 'true';
+
+    container.addEventListener('click', function (e) {
+
+        const sortHeader =
+            e.target.closest('.sortable');
+
+        if (sortHeader) {
+
+            window.employeeSortField =
+                sortHeader.dataset.field;
+
+            window.employeeSortDir =
+                sortHeader.dataset.dir;
+
+            refreshEmployeeTable(1);
+
+            return;
+        }
+
+        const pageLink =
+            e.target.closest('.page-link-nav');
+
+        if (pageLink) {
+
+            e.preventDefault();
+
+            if (pageLink.closest('.disabled')) {
+                return;
+            }
+
+            refreshEmployeeTable(
+                pageLink.dataset.page
+            );
+
+            return;
+        }
+
+        const editBtn =
+            e.target.closest('.btn-edit-row');
+
+        if (editBtn) {
+
+            const row = editBtn.closest('tr');
+
+            row.querySelectorAll('.cell-view')
+                .forEach(el =>
+                    el.classList.add('d-none'));
+
+            row.querySelectorAll('.cell-input')
+                .forEach(el =>
+                    el.classList.remove('d-none'));
+
+            editBtn.classList.add('d-none');
+
+            row.querySelector('.btn-save-row')
+                .classList.remove('d-none');
+
+            row.querySelector('.btn-cancel-row')
+                .classList.remove('d-none');
+
+            return;
+        }
+
+        const cancelBtn =
+            e.target.closest('.btn-cancel-row');
+
+        if (cancelBtn) {
+
+            const activePage =
+                document.querySelector(
+                    '.page-item.active .page-link-nav'
+                )?.dataset.page || 1;
+
+            refreshEmployeeTable(activePage);
+
+            return;
+        }
+
+        const saveBtn =
+            e.target.closest('.btn-save-row');
+
+        if (saveBtn) {
+
+            const row = saveBtn.closest('tr');
+
+            const params =
+                new URLSearchParams();
+
+            params.set(
+                'ObjectID',
+                row.dataset.id
+            );
+
+            row.querySelectorAll('.cell-input')
+                .forEach(input => {
+
+                    params.set(
+                        input.dataset.field,
+                        input.value
+                    );
+
+                });
+
+            /*
+             * Send the anti-forgery token with the AJAX request.
+             */
+            const token =
+                document.querySelector(
+                    'input[name="__RequestVerificationToken"]'
+                )?.value;
+
+            if (token) {
+                params.set(
+                    '__RequestVerificationToken',
+                    token
+                );
+            }
+
+            fetch('/Employee/Update', {
+                method: 'POST',
+
+                headers: {
+                    'Content-Type':
+                        'application/x-www-form-urlencoded'
+                },
+
+                body: params.toString()
+            })
+            .then(response => {
+
+                if (!response.ok) {
+                    throw new Error(
+                        'Update request failed: ' +
+                        response.status
+                    );
+                }
+
+                return response.json();
+            })
+            .then(res => {
+
+                if (window.showEmployeeToastFromTable) {
+
+                    window.showEmployeeToastFromTable(
+                        res.message,
+                        res.success
+                    );
+
+                }
+
+                const activePage =
+                    document.querySelector(
+                        '.page-item.active .page-link-nav'
+                    )?.dataset.page || 1;
+
+                refreshEmployeeTable(activePage);
+
+            })
+            .catch(error => {
+
+                console.error(error);
+
+                if (window.showEmployeeToastFromTable) {
+
+                    window.showEmployeeToastFromTable(
+                        'Unable to update employee.',
+                        false
+                    );
+
+                }
+
+            });
+        }
+
+    });
+
+})();
+</script>

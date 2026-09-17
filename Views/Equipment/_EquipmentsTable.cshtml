@@ -1,0 +1,216 @@
+﻿@model CostAccounting.Models.EquipmentIndexVM
+@{
+    string sortCol = (ViewBag.SortColumn as string) ?? "Code";
+    string sortDir = (ViewBag.SortDir as string) ?? "asc";
+
+    string SortIcon(string col)
+    {
+        if (!string.Equals(sortCol, col, StringComparison.OrdinalIgnoreCase))
+            return "<i class='bi bi-arrow-down-up text-muted opacity-50 ms-1' style='font-size:.7rem'></i>";
+        return sortDir == "asc"
+            ? "<i class='bi bi-sort-up-alt text-primary ms-1' style='font-size:.7rem'></i>"
+            : "<i class='bi bi-sort-down-alt text-primary ms-1' style='font-size:.7rem'></i>";
+    }
+
+    int from = ((Model.CurrentPage - 1) * Model.PageSize) + 1;
+    int to = Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount);
+    int start = Math.Max(1, Model.CurrentPage - 2);
+    int end = Math.Min(Model.TotalPages, start + 4);
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th class="ps-3 sortable" data-sort="Code">
+                        Code @Html.Raw(SortIcon("Code"))
+                    </th>
+                    <th class="sortable" data-sort="Category">
+                        Category @Html.Raw(SortIcon("Category"))
+                    </th>
+                    <th class="sortable" data-sort="MfgYear">
+                        Mfg Year @Html.Raw(SortIcon("MfgYear"))
+                    </th>
+                    <th class="sortable" data-sort="DateInService">
+                        Date In Service @Html.Raw(SortIcon("DateInService"))
+                    </th>
+                    <th class="sortable" data-sort="Make">
+                        Make @Html.Raw(SortIcon("Make"))
+                    </th>
+                    <th class="sortable" data-sort="Model">
+                        Model @Html.Raw(SortIcon("Model"))
+                    </th>
+                    <th class="sortable" data-sort="Department">
+                        Department @Html.Raw(SortIcon("Department"))
+                    </th>
+                    <th class="text-end">Current Rate</th>
+                    <th class="sortable text-center" data-sort="Active">
+                        Active @Html.Raw(SortIcon("Active"))
+                    </th>
+                    <th class="text-end pe-3">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Equipments.Any())
+                {
+                    <tr>
+                        <td colspan="10" class="text-center py-5 text-muted">
+                            <i class="bi bi-tools fs-3 d-block mb-2 opacity-50"></i>
+                            No equipments found.
+                        </td>
+                    </tr>
+                }
+
+                @foreach (var eq in Model.Equipments)
+                {
+                    <tr id="row-@eq.ObjectID" class="@(eq.Active != true ? "text-muted" : "")">
+
+                        @* Code — read-only *@
+                        <td class="ps-3">
+                            <span class="badge bg-light text-dark border fw-normal font-monospace">
+                                @eq.Code
+                            </span>
+                        </td>
+
+                        @* Category *@
+                        <td>
+                            <span class="cell-view">@(eq.Category ?? "—")</span>
+                            <input class="cell-input form-control form-control-sm d-none"
+                                   data-field="category" value="@eq.Category"
+                                   style="min-width:110px" />
+                        </td>
+
+                        @* Mfg Year *@
+                        <td>
+                            <span class="cell-view">@(eq.MfgYear ?? "—")</span>
+                            <input class="cell-input form-control form-control-sm d-none"
+                                   data-field="mfgYear" value="@eq.MfgYear"
+                                   style="width:80px" />
+                        </td>
+
+                        @* Date In Service *@
+                        <td>
+                            <span class="cell-view">
+                                @(eq.DateInService.HasValue
+                                    ? eq.DateInService.Value.ToString("MM/dd/yyyy")
+                                    : "—")
+                            </span>
+                            <input type="date"
+                                   class="cell-input form-control form-control-sm d-none"
+                                   data-field="dateInService"
+                                   value="@(eq.DateInService.HasValue ? eq.DateInService.Value.ToString("yyyy-MM-dd") : "")"
+                                   style="min-width:130px" />
+                        </td>
+
+                        @* Make *@
+                        <td>
+                            <span class="cell-view">@(eq.Make ?? "—")</span>
+                            <input class="cell-input form-control form-control-sm d-none"
+                                   data-field="make" value="@eq.Make"
+                                   style="min-width:100px" />
+                        </td>
+
+                        @* Model *@
+                        <td>
+                            <span class="cell-view">@(eq.EquipmentModel ?? "—")</span>
+                            <input class="cell-input form-control form-control-sm d-none"
+                                   data-field="model" value="@eq.EquipmentModel "
+                                   style="min-width:100px" />
+                        </td>
+
+                        @* Department *@
+                        <td>
+                            <span class="cell-view">@(eq.Department ?? "—")</span>
+                            <input class="cell-input form-control form-control-sm d-none"
+                                   data-field="department" value="@eq.Department"
+                                   style="min-width:110px" />
+                        </td>
+
+                        @* Current Rate — read-only *@
+                        <td class="text-end font-monospace">
+                            @if (eq.CurrentRate.HasValue)
+                            {
+                                @eq.CurrentRate.Value.ToString("C2")
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+
+                        @* Active *@
+                        <td class="text-center">
+                            <span class="cell-view">
+                                @if (eq.Active == true)
+                                {
+                                    <span class="badge text-bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-secondary">Inactive</span>
+                                }
+                            </span>
+                            <div class="cell-input form-check form-switch d-none justify-content-center mb-0">
+                                <input class="form-check-input" type="checkbox"
+                                       data-field="active"
+                                @(eq.Active == true ? "checked" : "") />
+                            </div>
+                        </td>
+
+                        @* Actions *@
+                        <td class="text-end pe-3 text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-edit"
+                                    title="Edit" data-id="@eq.ObjectID">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success py-0 px-2 btn-save d-none"
+                                    title="Save" data-id="@eq.ObjectID">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2 btn-cancel d-none"
+                                    title="Cancel" data-id="@eq.ObjectID">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger py-0 px-2 btn-delete"
+                                    title="Delete" data-id="@eq.ObjectID"
+                                    data-code="@eq.Code">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex align-items-center justify-content-between py-2 px-3">
+            <small class="text-muted">
+                Showing @from–@to of @Model.TotalCount
+            </small>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                        <button class="page-link" data-page="@(Model.CurrentPage - 1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                    </li>
+                    @for (int p = start; p <= end; p++)
+                    {
+                        <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                            <button class="page-link" data-page="@p">@p</button>
+                        </li>
+                    }
+                    <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                        <button class="page-link" data-page="@(Model.CurrentPage + 1)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    }
+</div>

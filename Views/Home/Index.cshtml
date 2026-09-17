@@ -1,0 +1,7 @@
+﻿@{
+    ViewData["Title"] = "Home";
+}
+
+<h3>Welcome, @User.FindFirst("FullName")?.Value</h3>
+<p>You're signed in as <strong>@User.Identity?.Name</strong> (role: @(User.IsInRole("Admin") ? "Admin" : "User")).</p>
+<p>This page - and every other page in the app - is only reachable once you've logged in.</p>

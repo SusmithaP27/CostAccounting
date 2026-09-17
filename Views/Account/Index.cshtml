@@ -1,0 +1,714 @@
+﻿@model CostAccounting.Models.AccountIndexVM
+@{
+    ViewData["Title"] = "Accounts";
+
+    string SortIcon(string column) =>
+        Model.SortColumn?.Equals(column, StringComparison.OrdinalIgnoreCase) == true
+            ? (Model.SortDirection == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up")
+            : "bi-arrow-down-up text-muted";
+
+    string NextDirection(string column) =>
+        Model.SortColumn?.Equals(column, StringComparison.OrdinalIgnoreCase) == true
+            && Model.SortDirection == "asc" ? "desc" : "asc";
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-0 fw-bold">
+                <i class="bi bi-wallet2 text-primary me-2"></i>Accounts
+            </h4>   
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+            <i class="bi bi-plus-lg me-1"></i> Add New Account
+        </button>
+    </div>
+
+    <!-- Search & Filter Toolbar -->
+    <form method="get" id="filterForm">
+        <input type="hidden" name="sortColumn" id="sortColumnInput" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" id="sortDirectionInput" value="@Model.SortDirection" />
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+
+                    <!-- Search -->
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text"
+                                   name="searchTerm"
+                                   id="searchInput"
+                                   value="@Model.SearchTerm"
+                                   class="form-control form-control-sm"
+                                   placeholder="Search code, description, user…" />
+                        </div>
+                    </div>
+
+                    <!-- Type Filter -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm">
+                            <label class="input-group-text bg-white">Type</label>
+                            <select name="filterTypeId" class="form-select form-select-sm"
+                                    onchange="document.getElementById('filterForm').submit()">
+                                <option value="">All</option>
+                                @foreach (var t in Model.AccountTypes)
+                                {
+                                    if (Model.FilterTypeId.HasValue && Model.FilterTypeId.Value == t.ObjectID)
+                                    {
+                                        <option value="@t.ObjectID" selected>@t.Code</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@t.ObjectID">@t.Code</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Active Filter -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm">
+                            <label class="input-group-text bg-white">Active</label>
+                            <select name="filterActive" class="form-select form-select-sm"
+                                    onchange="document.getElementById('filterForm').submit()">
+                                <option value="" selected="@(Model.FilterActive == null ? "selected" : null)">All</option>
+                                <option value="true" selected="@(Model.FilterActive == true ? "selected" : null)">Yes</option>
+                                <option value="false" selected="@(Model.FilterActive == false ? "selected" : null)">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Search Button -->
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-search me-1"></i>Search
+                        </button>
+                    </div>
+
+                    <!-- Clear Button -->
+                    @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.FilterActive.HasValue || Model.FilterTypeId.HasValue)
+                    {
+                        <div class="col-auto">
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle me-1"></i>Refresh
+                            </a>
+                        </div>
+                    }
+
+                    <!-- Results Count -->
+                    <div class="col-auto ms-auto">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                            @Model.TotalCount record(s)
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Table Card -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            @{
+                                (string Col, string Label, string Width, string Extra)[] cols = new[]
+                                {
+                                    ("Code", "Code", "110px", ""),
+                                    ("Description", "Description", "", ""),
+                                    ("AccountTypeName", "Type", "130px", ""),
+                                    ("EnteredByUser", "Entered By", "130px", ""),
+                                    ("EnteredDate", "Entered Date", "130px", ""),
+                                    ("Active", "Active", "90px", "text-center")
+                                };
+                            }
+                            @foreach (var c in cols)
+                            {
+                                <th style="@(string.IsNullOrEmpty(c.Width) ? "" : $"width:{c.Width}")" class="@c.Extra">
+                                    <a class="text-decoration-none text-dark d-flex align-items-center gap-1 @(c.Col == "Active" ? "justify-content-center" : "")"
+                                       href="@Url.Action("Index", new {
+                                            searchTerm = Model.SearchTerm,
+                                            filterActive = Model.FilterActive,
+                                            filterTypeId = Model.FilterTypeId,
+                                            page = 1,
+                                            sortColumn = c.Col,
+                                            sortDirection = NextDirection(c.Col)
+                                       })">
+                                        @c.Label <i class="bi @SortIcon(c.Col)"></i>
+                                    </a>
+                                </th>
+                            }
+                            <th class="text-center" style="width:160px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        @if (Model.Accounts != null && Model.Accounts.Any())
+                        {
+                            @foreach (var acc in Model.Accounts)
+                            {
+                                var activeJs = acc.Active == true ? "true" : "false";
+
+                                <tr id="row-@acc.ObjectID"
+                                    data-active="@activeJs"
+                                    data-typeid="@acc.AccountTypeId">
+
+                                    <!-- Code -->
+                                    <td>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">
+                                            @acc.Code
+                                        </span>
+                                    </td>
+
+                                    <!-- Description — view + edit input -->
+                                    <td>
+                                        <span id="desc-display-@acc.ObjectID">@acc.Description</span>
+                                        <input id="desc-input-@acc.ObjectID"
+                                               class="form-control form-control-sm d-none"
+                                               value="@acc.Description" maxlength="100" />
+                                    </td>
+
+                                    <!-- Type — view + edit select -->
+                                    <td>
+                                        <span id="type-display-@acc.ObjectID">
+                                            @{
+                                                var typeName = acc.AccountTypeName ?? "";
+                                                var typeCss  = typeName switch {
+                                                    "Employee"  => "bg-info-subtle text-info border-info-subtle",
+                                                    "Equipment" => "bg-warning-subtle text-warning border-warning-subtle",
+                                                    "Material"  => "bg-success-subtle text-success border-success-subtle",
+                                                    _           => "bg-secondary-subtle text-secondary"
+                                                };
+                                            }
+                                            <span class="badge @typeCss border">@typeName</span>
+                                        </span>
+                                        <select id="type-select-@acc.ObjectID"
+                                                class="form-select form-select-sm d-none">
+                                            @foreach (var t in Model.AccountTypes)
+                                            {
+                                                if (t.ObjectID == acc.AccountTypeId)
+                                                {
+                                                    <option value="@t.ObjectID" selected>@t.Code</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@t.ObjectID">@t.Code</option>
+                                                }
+                                            }
+                                        </select>
+                                    </td>
+
+                                    <!-- Entered By — view + edit input -->
+                                    <td>
+                                        <span id="user-display-@acc.ObjectID">@acc.EnteredByUser</span>
+                                        <input id="user-input-@acc.ObjectID"
+                                               class="form-control form-control-sm d-none"
+                                               value="@acc.EnteredByUser" maxlength="50" />
+                                    </td>
+
+                                    <!-- Entered Date (read-only) -->
+                                    <td class="text-muted">
+                                        @acc.EnteredDate?.ToString("dd MMM yyyy")
+                                    </td>
+
+                                    <!-- Active badge / toggle -->
+                                    <td class="text-center" id="active-display-@acc.ObjectID">
+                                        @if (acc.Active == true)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Yes
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border">No</span>
+                                        }
+                                    </td>
+
+                                    <!-- Actions -->
+                                    <td class="text-center">
+                                        <div id="actions-view-@acc.ObjectID">
+                                            <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+                                                    onclick="startEdit(@acc.ObjectID, @activeJs)"
+                                                    title="Inline Edit">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm py-0 px-2 ms-1"
+                                                    onclick="deleteRow(@acc.ObjectID)"
+                                                    title="Delete">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </div>
+
+                                        <div id="actions-edit-@acc.ObjectID" style="display:none">
+                                            <button class="btn btn-success btn-sm py-0 px-2"
+                                                    id="save-btn-@acc.ObjectID"
+                                                    onclick="saveRow(@acc.ObjectID)"
+                                                    title="Save">
+                                                <i class="bi bi-check-lg"></i> Save
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm py-0 px-2 ms-1"
+                                                    onclick="cancelEdit(@acc.ObjectID)"
+                                                    title="Cancel">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No accounts found. Try adjusting your search or filters.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        @if (Model.TotalCount > 0)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                <small class="text-muted">
+                    Showing
+                    <strong>@((Model.CurrentPage - 1) * Model.PageSize + 1)–@Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount)</strong>
+                    of <strong>@Model.TotalCount</strong> records
+                </small>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Account pagination">
+                        <ul class="pagination pagination-sm mb-0">
+
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = 1, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">«</a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = Model.CurrentPage - 1, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">‹</a>
+                            </li>
+
+                            @{
+                                int startPage = Math.Max(1, Model.CurrentPage - 2);
+                                int endPage   = Math.Min(Model.TotalPages, startPage + 4);
+                                startPage     = Math.Max(1, endPage - 4);
+                            }
+                            @for (int p = startPage; p <= endPage; p++)
+                            {
+                                <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link"
+                                       href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = p, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">@p</a>
+                                </li>
+                            }
+
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = Model.CurrentPage + 1, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">›</a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link"
+                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = Model.TotalPages, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">»</a>
+                            </li>
+
+                        </ul>
+                    </nav>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ===================== ADD NEW MODAL ===================== -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="addModalLabel">
+                    <i class="bi bi-plus-circle me-2 text-primary"></i>Add New Account
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Code <span class="text-danger">*</span></label>
+                    <input type="text" id="newCode" class="form-control form-control-sm"
+                           placeholder="e.g. ACC-001" maxlength="50" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Description</label>
+                    <input type="text" id="newDescription" class="form-control form-control-sm"
+                           placeholder="Account description…" maxlength="100" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">
+                        Type <span class="text-danger">*</span>
+                    </label>
+                    <select id="newTypeId" class="form-select form-select-sm">
+                        <option value="">Select type…</option>
+                        @foreach (var t in Model.AccountTypes)
+                        {
+                            <!-- value = ObjectID (88/89/90) — stored in DB -->
+                            <option value="@t.ObjectID">@t.Code</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small">Active</label>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" id="newActive" checked />
+                            <label class="form-check-label small" for="newActive">Yes</label>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small">Entered By User</label>
+                        <input type="text" id="newEnteredByUser" class="form-control form-control-sm bg-light text-muted"
+                               value="@User.Identity?.Name" readonly />
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Entered Date</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-clock text-primary"></i>
+                        </span>
+                        <input type="text" class="form-control bg-light text-muted"
+                               id="autoDateDisplay" readonly />
+                    </div>
+                    <div class="form-text">Recorded automatically when saved.</div>
+                </div>
+
+                <div id="modalError" class="alert alert-danger py-2 small d-none mt-2" role="alert"></div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveNewBtn" onclick="saveNew()">
+                    <i class="bi bi-save me-1"></i>Save Account
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+    <div id="liveToast" class="toast align-items-center border-0 shadow" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold small" id="toastMessage">Saved.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+<script>
+        // Built from server-side Model.AccountTypes — no hard-coded IDs in JS
+        const accountTypes = @Html.Raw(
+            System.Text.Json.JsonSerializer.Serialize(
+                Model.AccountTypes.Select(t => new { id = t.ObjectID, name = t.Code })
+            )
+        );
+
+        const token   = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const bsModal = new bootstrap.Modal(document.getElementById('addModal'));
+        const toastEl = document.getElementById('liveToast');
+
+        // ── Toast ─────────────────────────────────────────────────────
+        function showToast(message, type = 'success') {
+            toastEl.className = `toast align-items-center border-0 shadow text-bg-${type}`;
+            document.getElementById('toastMessage').textContent = message;
+            bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000 }).show();
+        }
+
+        // ── Open Add Modal ────────────────────────────────────────────
+        function openAddModal() {
+            document.getElementById('newCode').value          = '';
+            document.getElementById('newDescription').value   = '';
+            document.getElementById('newTypeId').value        = '';
+            //document.getElementById('newEnteredByUser').value = '';
+            document.getElementById('newActive').checked      = true;
+            document.getElementById('modalError').classList.add('d-none');
+
+            const now = new Date();
+            document.getElementById('autoDateDisplay').value =
+                now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+                ' ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+            bsModal.show();
+            setTimeout(() => document.getElementById('newCode').focus(), 300);
+        }
+
+        // ── Save New Account ──────────────────────────────────────────
+        async function saveNew() {
+            const code        = document.getElementById('newCode').value.trim();
+            const desc        = document.getElementById('newDescription').value.trim();
+            const typeId      = document.getElementById('newTypeId').value;
+            const active      = document.getElementById('newActive').checked;
+            const user        = document.getElementById('newEnteredByUser').value.trim();
+            const errEl       = document.getElementById('modalError');
+
+            // Client-side validation
+            if (!code) {
+                errEl.textContent = 'Code is required.';
+                errEl.classList.remove('d-none');
+                document.getElementById('newCode').focus();
+                return;
+            }
+            if (!typeId) {
+                errEl.textContent = 'Please select a type.';
+                errEl.classList.remove('d-none');
+                document.getElementById('newTypeId').focus();
+                return;
+            }
+
+            const btn = document.getElementById('saveNewBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+            errEl.classList.add('d-none');
+
+            try {
+                const res = await fetch('@Url.Action("Create", "Account")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        Code:                    code,
+                        Description:             desc,
+                        AccountTypeObjectID:     typeId,
+                        Active:                  active,
+                        EnteredByUser:           user,
+                        __RequestVerificationToken: token
+                    })
+                });
+
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/json'))
+                    throw new Error('Unexpected server response. Please refresh and try again.');
+
+                const data = await res.json();
+
+                if (data.success) {
+                    bsModal.hide();
+                    showToast('Account added successfully!', 'success');
+                    setTimeout(() => location.reload(), 900);
+                } else {
+                    errEl.textContent = data.message || 'Failed to save.';
+                    errEl.classList.remove('d-none');
+                }
+            } catch (err) {
+                errEl.textContent = err.message || 'Network error. Please try again.';
+                errEl.classList.remove('d-none');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save me-1"></i>Save Account';
+        }
+
+        // Enter key submits the modal
+        document.querySelectorAll('#addModal .form-control:not([readonly]), #addModal .form-select').forEach(el => {
+            el.addEventListener('keydown', e => { if (e.key === 'Enter') saveNew(); });
+        });
+
+        // ── Inline Edit — start ───────────────────────────────────────
+        function startEdit(id, activeVal) {
+            document.getElementById('row-' + id).classList.add('table-warning');
+
+            // Show editable inputs
+            document.getElementById('desc-display-' + id).classList.add('d-none');
+            document.getElementById('desc-input-'   + id).classList.remove('d-none');
+
+            document.getElementById('type-display-' + id).classList.add('d-none');
+            document.getElementById('type-select-'  + id).classList.remove('d-none');
+
+            document.getElementById('user-display-' + id).classList.add('d-none');
+            document.getElementById('user-input-'   + id).classList.remove('d-none');
+
+            // Replace Active badge with toggle switch
+            document.getElementById('active-display-' + id).innerHTML = `
+                <div class="form-check form-switch d-flex justify-content-center mb-0">
+                    <input class="form-check-input" type="checkbox" id="edit-active-${id}"
+                           role="switch" ${activeVal ? 'checked' : ''}>
+                </div>`;
+
+            document.getElementById('actions-view-' + id).style.display = 'none';
+            document.getElementById('actions-edit-' + id).style.display = 'block';
+
+            document.getElementById('desc-input-' + id).focus();
+        }
+
+        // ── Inline Edit — cancel (no page reload) ─────────────────────
+        function cancelEdit(id) {
+            const row    = document.getElementById('row-' + id);
+            const wasActive = row.dataset.active === 'true';
+
+            row.classList.remove('table-warning');
+
+            // Restore display spans
+            document.getElementById('desc-display-' + id).classList.remove('d-none');
+            document.getElementById('desc-input-'   + id).classList.add('d-none');
+
+            document.getElementById('type-display-' + id).classList.remove('d-none');
+            document.getElementById('type-select-'  + id).classList.add('d-none');
+
+            document.getElementById('user-display-' + id).classList.remove('d-none');
+            document.getElementById('user-input-'   + id).classList.add('d-none');
+
+            // Restore Active badge
+            document.getElementById('active-display-' + id).innerHTML = activeBadge(wasActive);
+
+            document.getElementById('actions-view-' + id).style.display = 'block';
+            document.getElementById('actions-edit-' + id).style.display = 'none';
+        }
+
+        // ── Inline Edit — save ────────────────────────────────────────
+        async function saveRow(id) {
+            const code        = document.querySelector(`#row-${id} td:first-child .badge`)?.textContent?.trim() ?? '';
+            const desc        = document.getElementById('desc-input-'   + id)?.value.trim() ?? '';
+            const typeId      = document.getElementById('type-select-'  + id)?.value ?? '';
+            const user        = document.getElementById('user-input-'   + id)?.value.trim() ?? '';
+            const active      = document.getElementById('edit-active-'  + id)?.checked ?? false;
+            const btn         = document.getElementById('save-btn-' + id);
+
+            if (!typeId) { showToast('Please select a type.', 'warning'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            try {
+                const res = await fetch('@Url.Action("InlineEdit", "Account")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ObjectID:                id,
+                        Code:                    code,
+                        Description:             desc,
+                        AccountTypeObjectID:     typeId,
+                        Active:                  active,
+                        EnteredByUser:           user,
+                        __RequestVerificationToken: token
+                    })
+                });
+
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/json'))
+                    throw new Error('Unexpected server response.');
+
+                const data = await res.json();
+
+                if (data.success) {
+                    // Update description display
+                    document.getElementById('desc-display-' + id).textContent = desc;
+                    document.getElementById('desc-input-'   + id).classList.add('d-none');
+                    document.getElementById('desc-display-' + id).classList.remove('d-none');
+
+                    // Update type badge
+                    const typeName = accountTypes.find(t => t.id == typeId)?.name ?? '';
+                    document.getElementById('type-display-' + id).innerHTML = typeBadge(typeName);
+                    document.getElementById('type-display-' + id).classList.remove('d-none');
+                    document.getElementById('type-select-'  + id).classList.add('d-none');
+
+                    // Update user display
+                    document.getElementById('user-display-' + id).textContent = user;
+                    document.getElementById('user-input-'   + id).classList.add('d-none');
+                    document.getElementById('user-display-' + id).classList.remove('d-none');
+
+                    // Update active badge and store new value
+                    document.getElementById('active-display-' + id).innerHTML = activeBadge(active);
+                    const row = document.getElementById('row-' + id);
+                    row.dataset.active  = active.toString();
+                    row.dataset.typeid  = typeId;
+                    row.classList.replace('table-warning', 'table-success');
+                    setTimeout(() => row.classList.remove('table-success'), 1500);
+
+                    document.getElementById('actions-view-' + id).style.display = 'block';
+                    document.getElementById('actions-edit-' + id).style.display = 'none';
+                    showToast('Account updated.', 'success');
+                } else {
+                    showToast(data.message || 'Save failed.', 'danger');
+                }
+            } catch (err) {
+                showToast(err.message || 'Network error.', 'danger');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
+        }
+
+        // ── Soft Delete ───────────────────────────────────────────────
+    async function deleteRow(id) {
+        if (!confirm('Delete this road record?')) return;
+        try {
+            const res  = await fetch('@Url.Action("SoftDelete","Account")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ id, __RequestVerificationToken: token })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const row = document.getElementById('row-' + id);
+                row.style.transition = 'opacity 0.4s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 400);
+                showToast('Record deleted.', 'success');
+            } else {
+                showToast(data.message || 'Delete failed.', 'danger');
+            }
+        } catch {
+            showToast('Network error.', 'danger');
+        }
+    }
+
+
+        // ── Badge helpers ─────────────────────────────────────────────
+        function activeBadge(val) {
+            return val
+                ? `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Yes</span>`
+                : `<span class="badge bg-secondary-subtle text-secondary border">No</span>`;
+        }
+
+        function typeBadge(name) {
+            const css = {
+                'Employee':  'bg-info-subtle text-info border-info-subtle',
+                'Equipment': 'bg-warning-subtle text-warning border-warning-subtle',
+                'Material':  'bg-success-subtle text-success border-success-subtle'
+            }[name] ?? 'bg-secondary-subtle text-secondary';
+            return `<span class="badge ${css} border">${name}</span>`;
+        }
+
+        // ── Search debounce ───────────────────────────────────────────
+        let searchTimer;
+        document.getElementById('searchInput').addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => document.getElementById('filterForm').submit(), 500);
+        });
+    </script>
+}

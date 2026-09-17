@@ -1,0 +1,218 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Applications Build\\CostAccounting\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\services\\accountservice\\accountservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:services\\accountservice\\accountservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\services\\allowanceservice\\allowanceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:services\\allowanceservice\\allowanceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\views\\allowance\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:views\\allowance\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:data\\applicationdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\controllers\\allowancecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:controllers\\allowancecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\services\\allowanceservice\\iallowanceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:services\\allowanceservice\\iallowanceservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\models\\allowancevm.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:models\\allowancevm.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\models\\allowance.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:models\\allowance.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\views\\allowance\\_allowancetable.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:views\\allowance\\_allowancetable.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|c:\\applications build\\costaccounting\\models\\accountvm.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{871E3C7C-F450-4079-9127-F57CEB5F9B8D}|CostAccounting.csproj|solutionrelative:models\\accountvm.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "Properties\\launchSettings.json",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Properties\\launchSettings.json",
+              "RelativeToolTip": "Properties\\launchSettings.json",
+              "ViewState": "AgIAABIAAAAAAAAAAAAAAA4AAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-07-30T16:38:08.562Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "AllowanceService.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Services\\AllowanceService\\AllowanceService.cs",
+              "RelativeDocumentMoniker": "Services\\AllowanceService\\AllowanceService.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Services\\AllowanceService\\AllowanceService.cs",
+              "RelativeToolTip": "Services\\AllowanceService\\AllowanceService.cs",
+              "ViewState": "AgIAADAAAAAAAAAAAADgvz0AAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:37:28.322Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "index.cshtml",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Views\\Allowance\\index.cshtml",
+              "RelativeDocumentMoniker": "Views\\Allowance\\index.cshtml",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Views\\Allowance\\index.cshtml",
+              "RelativeToolTip": "Views\\Allowance\\index.cshtml",
+              "ViewState": "AgIAAI8AAAAAAAAAAABRwCkAAAALAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-07-16T17:39:01.25Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ApplicationDbContext.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Data\\ApplicationDbContext.cs",
+              "RelativeDocumentMoniker": "Data\\ApplicationDbContext.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Data\\ApplicationDbContext.cs",
+              "RelativeToolTip": "Data\\ApplicationDbContext.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAACAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:38:21.599Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "AccountService.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Services\\AccountService\\AccountService.cs",
+              "RelativeDocumentMoniker": "Services\\AccountService\\AccountService.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Services\\AccountService\\AccountService.cs",
+              "RelativeToolTip": "Services\\AccountService\\AccountService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAA2AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:34:00.182Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "AllowanceController.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Controllers\\AllowanceController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AllowanceController.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Controllers\\AllowanceController.cs",
+              "RelativeToolTip": "Controllers\\AllowanceController.cs",
+              "ViewState": "AgIAAB0AAAAAAAAAAAAUwDEAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:37:53.099Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "IAllowanceService.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Services\\AllowanceService\\IAllowanceService.cs",
+              "RelativeDocumentMoniker": "Services\\AllowanceService\\IAllowanceService.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Services\\AllowanceService\\IAllowanceService.cs",
+              "RelativeToolTip": "Services\\AllowanceService\\IAllowanceService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:37:19.934Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "AllowanceVM.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Models\\AllowanceVM.cs",
+              "RelativeDocumentMoniker": "Models\\AllowanceVM.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Models\\AllowanceVM.cs",
+              "RelativeToolTip": "Models\\AllowanceVM.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:36:59.731Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "Allowance.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Models\\Allowance.cs",
+              "RelativeDocumentMoniker": "Models\\Allowance.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Models\\Allowance.cs",
+              "RelativeToolTip": "Models\\Allowance.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAqAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T15:50:43.949Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "_AllowanceTable.cshtml",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Views\\Allowance\\_AllowanceTable.cshtml",
+              "RelativeDocumentMoniker": "Views\\Allowance\\_AllowanceTable.cshtml",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Views\\Allowance\\_AllowanceTable.cshtml",
+              "RelativeToolTip": "Views\\Allowance\\_AllowanceTable.cshtml",
+              "ViewState": "AgIAABMAAAAAAAAAAAAEwCsAAAAdAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-07-16T17:39:27.399Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB4AAABCAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:38:06.387Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "AccountVM.cs",
+              "DocumentMoniker": "C:\\Applications Build\\CostAccounting\\Models\\AccountVM.cs",
+              "RelativeDocumentMoniker": "Models\\AccountVM.cs",
+              "ToolTip": "C:\\Applications Build\\CostAccounting\\Models\\AccountVM.cs",
+              "RelativeToolTip": "Models\\AccountVM.cs",
+              "ViewState": "AgIAADsAAAAAAAAAAAAmwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-16T17:16:52.544Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

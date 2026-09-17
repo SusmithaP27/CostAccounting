@@ -1,0 +1,57 @@
+﻿@model CostAccounting.Models.ViewModels.AllowanceIndexVM
+
+<table class="table table-sm table-hover align-middle">
+    <thead>
+        <tr>
+            <th style="width:30px"></th>
+            <th style="width:60px">SELECT</th>
+            <th class="sortable" data-sort="Year">YEAR</th>
+            <th class="sortable" data-sort="Rate">COUNTY BENEFIT</th>
+            <th class="sortable" data-sort="Type">TYPE</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (!Model.Allowances.Any())
+        {
+            <tr><td colspan="5" class="text-center text-muted">No results found.</td></tr>
+        }
+        @foreach (var row in Model.Allowances)
+        {
+            <tr data-id="@row.ObjectID" class="@(row.Active == false ? "table-secondary" : "")">
+                <td></td>
+                <td><input type="checkbox" class="row-check" value="@row.ObjectID" /></td>
+
+                <td>
+                    <span class="cell-view">@row.Year</span>
+                    <input class="cell-input d-none form-control form-control-sm"
+                           type="number" value="@row.Year" data-field="Year" />
+                </td>
+
+                <td>
+                    <span class="cell-view">@row.Rate?.ToString("0.0000")</span>
+                    <input class="cell-input d-none form-control form-control-sm"
+                           type="number" step="0.0001" value="@row.Rate" data-field="Rate" />
+                </td>
+
+                @* <td>
+                    <select class="form-select form-select-sm subtype-select" data-field="AllowanceSubTypeObjectID">
+                        @foreach (var opt in Model.SubTypeOptions)
+                        {
+                            <option value="@opt.Value" selected="@(opt.Value == row.AllowanceSubTypeObjectID?.ToString())">
+                                @opt.Text
+                            </option>
+                        }
+                    </select>
+                </td> *@
+            </tr>
+            <tr data-id="@row.ObjectID" class="active-row-extra d-none">
+                <td colspan="5">
+                    <select class="form-select form-select-sm active-select" data-field="Active">
+                        <option value="true" selected="@(row.Active == true)">Active</option>
+                        <option value="false" selected="@(row.Active == false)">Inactive</option>
+                    </select>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

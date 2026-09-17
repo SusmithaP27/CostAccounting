@@ -1,0 +1,147 @@
+﻿@model CostAccounting.Models.MaterialRateIndexVM
+@{
+    string sc = Model.SortColumn ?? "MaterialCode";
+    string sd = Model.SortDir ?? "asc";
+
+    string Icon(string col)
+    {
+        if (!string.Equals(sc, col, StringComparison.OrdinalIgnoreCase))
+            return "<i class='bi bi-arrow-down-up text-muted opacity-50 ms-1' style='font-size:.7rem'></i>";
+        return sd == "asc"
+            ? "<i class='bi bi-sort-up-alt text-primary ms-1' style='font-size:.7rem'></i>"
+            : "<i class='bi bi-sort-down-alt text-primary ms-1' style='font-size:.7rem'></i>";
+    }
+
+    int from = ((Model.CurrentPage - 1) * Model.PageSize) + 1;
+    int to = Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount);
+    int pStart = Math.Max(1, Model.CurrentPage - 2);
+    int pEnd = Math.Min(Model.TotalPages, pStart + 4);
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 small" id="ratesTable">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th class="ps-3" style="width:42px">
+                        <input type="checkbox" id="chkAll" class="form-check-input" title="Select all" />
+                    </th>
+                    <th class="sortable" data-sort="MaterialCode" style="min-width:220px">
+                        Material @Html.Raw(Icon("MaterialCode"))
+                    </th>
+                    <th class="sortable" data-sort="StartDate">
+                        Rate Start Date @Html.Raw(Icon("StartDate"))
+                    </th>
+                    <th class="sortable" data-sort="EndDate">
+                        Rate End Date @Html.Raw(Icon("EndDate"))
+                    </th>
+                    <th class="sortable text-end" data-sort="Rate">
+                        Rate @Html.Raw(Icon("Rate"))
+                    </th>
+                    <th class="sortable text-end" data-sort="BaseRate">
+                        Base Rate @Html.Raw(Icon("BaseRate"))
+                    </th>
+                    <th class="text-end pe-3" style="width:90px">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Rates.Any())
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-bar-chart fs-3 d-block mb-2 opacity-50"></i>
+                            No rates found. Adjust your filters and click Refresh.
+                        </td>
+                    </tr>
+                }
+                @foreach (var r in Model.Rates)
+                {
+                    <tr id="rrow-@r.MaterialObjectId">
+                        <td class="ps-3">
+                            <input type="checkbox" class="form-check-input row-chk" value="@r.MaterialObjectId" />
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border fw-normal font-monospace me-1">@r.MaterialCode</span>
+                            <span class="text-muted">@r.MaterialDescription</span>
+                        </td>
+                        <td>
+                            <span class="cell-view">@(r.StartDate?.ToString("MM/dd/yyyy") ?? "—")</span>
+                            <input type="date" class="cell-input form-control form-control-sm d-none"
+                                   data-field="startDate"
+                                   value="@(r.StartDate?.ToString("yyyy-MM-dd") ?? "")"
+                                   style="min-width:130px" />
+                        </td>
+                        <td>
+                            <span class="cell-view">@(r.EndDate?.ToString("MM/dd/yyyy") ?? "—")</span>
+                            <input type="date" class="cell-input form-control form-control-sm d-none"
+                                   data-field="endDate"
+                                   value="@(r.EndDate?.ToString("yyyy-MM-dd") ?? "")"
+                                   style="min-width:130px" />
+                        </td>
+                        <td class="text-end">
+                            <span class="cell-view font-monospace">@r.Rate.ToString("N4")</span>
+                            <input type="number" step="0.0001" class="cell-input form-control form-control-sm d-none text-end"
+                                   data-field="rate" value="@r.Rate" style="min-width:100px" />
+                        </td>
+                        <td class="text-end font-monospace text-muted">
+                            @r.Rate.ToString("N4")
+                        </td>
+                        <td class="text-end pe-3 text-nowrap">
+                            <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-edit-rate"
+                                    title="Edit" data-id="@r.MaterialObjectId">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success py-0 px-2 btn-save-rate d-none"
+                                    title="Save" data-id="@r.MaterialObjectId">
+                                <i class="bi bi-check-lg"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary py-0 px-2 btn-cancel-rate d-none"
+                                    title="Cancel" data-id="@r.MaterialObjectId">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* Footer: selected count + pagination *@
+    <div class="card-footer bg-white d-flex align-items-center justify-content-between py-2 px-3">
+        <small class="text-muted">
+            <span id="selectedCount">0</span> selected &nbsp;·&nbsp;
+            @if (Model.TotalCount > 0)
+            {
+                @:Showing @from–@to of @Model.TotalCount
+            }
+            else
+            {
+                @:0 records
+            }
+        </small>
+
+        @if (Model.TotalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                        <button class="page-link" data-page="@(Model.CurrentPage - 1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                    </li>
+                    @for (int p = pStart; p <= pEnd; p++)
+                    {
+                        <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                            <button class="page-link" data-page="@p">@p</button>
+                        </li>
+                    }
+                    <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                        <button class="page-link" data-page="@(Model.CurrentPage + 1)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+</div>

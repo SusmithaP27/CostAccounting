@@ -1,0 +1,173 @@
+@model CostAccounting.Models.EmployeeRateIndexVM
+
+@functions {
+    string SortIcon(string field, string currentField, string dir)
+        => field == currentField ? (dir == "asc" ? "bi-caret-up-fill" : "bi-caret-down-fill") : "bi-caret-down";
+    string NextDir(string field, string currentField, string dir)
+        => field == currentField && dir == "asc" ? "desc" : "asc";
+}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                <th><input type="checkbox" id="selectAllRates" class="form-check-input" /></th>
+                <th class="sortable" data-field="EmployeeName" data-dir="@NextDir("EmployeeName", Model.SortField, Model.SortDirection)">
+                    Employee <i class="bi @SortIcon("EmployeeName", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th class="sortable" data-field="StartDate" data-dir="@NextDir("StartDate", Model.SortField, Model.SortDirection)">
+                    Start Date <i class="bi @SortIcon("StartDate", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th class="sortable" data-field="EndDate" data-dir="@NextDir("EndDate", Model.SortField, Model.SortDirection)">
+                    End Date <i class="bi @SortIcon("EndDate", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th class="sortable" data-field="Rate" data-dir="@NextDir("Rate", Model.SortField, Model.SortDirection)">
+                    Rate <i class="bi @SortIcon("Rate", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th>Base Rate</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (!Model.EmployeeRates.Any())
+        {
+            <tr><td colspan="8" class="text-center text-muted py-4">No rate records found.</td></tr>
+        }
+        @foreach (var r in Model.EmployeeRates)
+        {
+            <tr data-id="@r.ObjectID">
+                <td><input type="checkbox" class="form-check-input rate-row-check" data-id="@r.ObjectID" /></td>
+                <td>
+                    @r.EmployeeName <span class="text-muted">(@r.EmployeeCode)</span>
+                    <input type="hidden" class="cell-input-always" data-field="EmployeeObjectId" value="@r.EmployeeObjectId" />
+                </td>
+                <td>
+                    <span class="cell-view">@r.StartDate.ToString("MM/dd/yyyy")</span>
+                    <input type="date" class="form-control form-control-sm cell-input d-none" data-field="StartDate" value="@r.StartDate.ToString("yyyy-MM-dd")" />
+                </td>
+                <td>
+                    <span class="cell-view">@(r.EndDate?.ToString("MM/dd/yyyy") ?? "—")</span>
+                    <input type="date" class="form-control form-control-sm cell-input d-none" data-field="EndDate" value="@(r.EndDate?.ToString("yyyy-MM-dd"))" />
+                </td>
+                <td>
+                    <span class="cell-view">@r.Rate.ToString("C")</span>
+                    <input type="number" step="0.01" class="form-control form-control-sm cell-input d-none" data-field="Rate" value="@r.Rate" />
+                </td>
+                <td>
+                    <span class="cell-view">@(r.BaseRate?.ToString("C") ?? "—")</span>
+                    <input type="number" step="0.01" class="form-control form-control-sm cell-input d-none" data-field="BaseRate" value="@r.BaseRate" />
+                </td>
+                <td>
+                    @if (r.IsCurrent)
+                    {
+                        <span class="badge bg-success">Current</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary">Ended</span>
+                    }
+                </td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-row" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success btn-save-row d-none" title="Save">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cancel-row d-none" title="Cancel">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-rate" data-id="@r.ObjectID" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="card-footer d-flex justify-content-between align-items-center">
+    <span class="text-muted">
+        Showing @(((Model.Page - 1) * Model.PageSize) + 1)-@(Math.Min(Model.Page * Model.PageSize, Model.TotalCount)) of @Model.TotalCount
+    </span>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link page-link-nav" href="#" data-page="@(Model.Page - 1)">Previous</a>
+            </li>
+            @for (int p = 1; p <= Model.TotalPages; p++)
+            {
+                <li class="page-item @(p == Model.Page ? "active" : "")">
+                    <a class="page-link page-link-nav" href="#" data-page="@p">@p</a>
+                </li>
+            }
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link page-link-nav" href="#" data-page="@(Model.Page + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<script>
+(function () {
+    const container = document.getElementById('employeeRateTableContainer');
+    if (!container || container.dataset.wired) return;
+    container.dataset.wired = 'true';
+
+    container.addEventListener('click', function (e) {
+        const sortHeader = e.target.closest('.sortable');
+        if (sortHeader) {
+            window.employeeRateSortField = sortHeader.dataset.field;
+            window.employeeRateSortDir = sortHeader.dataset.dir;
+            refreshEmployeeRateTable(1);
+            return;
+        }
+
+        const pageLink = e.target.closest('.page-link-nav');
+        if (pageLink) {
+            e.preventDefault();
+            refreshEmployeeRateTable(pageLink.dataset.page);
+            return;
+        }
+
+        const editBtn = e.target.closest('.btn-edit-row');
+        if (editBtn) {
+            const row = editBtn.closest('tr');
+            row.querySelectorAll('.cell-view').forEach(el => el.classList.add('d-none'));
+            row.querySelectorAll('.cell-input').forEach(el => el.classList.remove('d-none'));
+            editBtn.classList.add('d-none');
+            row.querySelector('.btn-save-row').classList.remove('d-none');
+            row.querySelector('.btn-cancel-row').classList.remove('d-none');
+            return;
+        }
+
+        const cancelBtn = e.target.closest('.btn-cancel-row');
+        if (cancelBtn) {
+            refreshEmployeeRateTable(document.querySelector('.page-item.active .page-link-nav')?.dataset.page || 1);
+            return;
+        }
+
+        const saveBtn = e.target.closest('.btn-save-row');
+        if (saveBtn) {
+            const row = saveBtn.closest('tr');
+            const params = new URLSearchParams();
+            params.set('ObjectID', row.dataset.id);
+            row.querySelectorAll('.cell-input, .cell-input-always').forEach(input => {
+                params.set(input.dataset.field, input.value);
+            });
+            fetch('/EmployeeRate/Update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (window.showEmployeeRateToast) window.showEmployeeRateToast(res.message, res.success);
+                refreshEmployeeRateTable(document.querySelector('.page-item.active .page-link-nav')?.dataset.page || 1);
+            });
+        }
+    });
+})();
+</script>

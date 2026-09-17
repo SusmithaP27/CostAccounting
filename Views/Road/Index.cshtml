@@ -1,0 +1,529 @@
+﻿@model CostAccounting.Models.RoadVM
+@{
+    ViewData["Title"] = "Roads";
+
+    string SortIcon(string column) =>
+        Model.SortColumn?.Equals(column, StringComparison.OrdinalIgnoreCase) == true
+            ? (Model.SortDirection == "asc" ? "bi-sort-alpha-down" : "bi-sort-alpha-up")
+            : "bi-arrow-down-up text-muted";
+
+    string NextDirection(string column) =>
+        Model.SortColumn?.Equals(column, StringComparison.OrdinalIgnoreCase) == true
+            && Model.SortDirection == "asc" ? "desc" : "asc";
+
+    bool hasActiveFilters = !string.IsNullOrEmpty(Model.SearchTerm)
+                          || Model.FilterEngineering.HasValue
+                          || Model.FilterActive != true;
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-0 fw-bold">Roads</h4>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+            <i class="bi bi-plus-lg me-1"></i> Add New Road
+        </button>
+    </div>
+
+    <!-- Search & Filter Toolbar -->
+    <form method="get" id="filterForm">
+        <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+
+                    <!-- Search -->
+                    <div class="col-md-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text"
+                                   name="searchTerm"
+                                   id="searchInput"
+                                   value="@Model.SearchTerm"
+                                   class="form-control form-control-sm"
+                                   placeholder="Search code, description, user…">
+                        </div>
+                    </div>
+
+                    <!-- Active Filter -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm">
+                            <label class="input-group-text bg-white">Active</label>
+                            <select name="filterActive" class="form-select form-select-sm"
+                                    onchange="document.getElementById('filterForm').submit()">
+                                <option value="" selected="@(Model.FilterActive == null ? "selected" : null)">All</option>
+                                <option value="true" selected="@(Model.FilterActive == true ? "selected" : null)">Yes</option>
+                                <option value="false" selected="@(Model.FilterActive == false ? "selected" : null)">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    @* <!-- Engineering Filter -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm">
+                            <label class="input-group-text bg-white">Engineering</label>
+                            <select name="filterEngineering" class="form-select form-select-sm"
+                                    onchange="document.getElementById('filterForm').submit()">
+                                <option value="" selected="@(Model.FilterEngineering == null ? "selected" : null)">All</option>
+                                <option value="true" selected="@(Model.FilterEngineering == true ? "selected" : null)">Yes</option>
+                                <option value="false" selected="@(Model.FilterEngineering == false ? "selected" : null)">No</option>
+                            </select>
+                        </div>
+                    </div> *@
+
+                    <!-- Search Button -->
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-search me-1"></i>Search
+                        </button>
+                    </div>
+
+                    <!-- Clear Button -->
+                    @if (hasActiveFilters)
+                    {
+                        <div class="col-auto">
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle me-1"></i>Clear
+                            </a>
+                        </div>
+                    }
+
+                    <!-- Results Count -->
+                    <div class="col-auto ms-auto">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                            @Model.TotalCount record(s)
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Table Card -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            @{
+                                (string Col, string Label, string Extra)[] cols = new[]
+                                {
+                                    ("Code", "Code", ""),
+                                    ("Description", "Description", ""),
+                                    ("EnteredByUser", "Entered By", ""),
+                                    ("EnteredDate", "Entered Date", ""),
+                                    ("Active", "Active", "text-center")
+                                };
+                            }
+                            @foreach (var c in cols)
+                            {
+                                <th class="@c.Extra" style="@(c.Col == "Active" ? "width:90px" : "")">
+                                    <a class="text-decoration-none text-dark d-flex align-items-center gap-1 @(c.Col == "Active" ? "justify-content-center" : "")"
+                                       href="@Url.Action("Index", new {
+                                            searchTerm = Model.SearchTerm,
+                                            filterActive = Model.FilterActive,
+                                            filterEngineering = Model.FilterEngineering,
+                                            page = 1,
+                                            sortColumn = c.Col,
+                                            sortDirection = NextDirection(c.Col)
+                                       })">
+                                        @c.Label <i class="bi @SortIcon(c.Col)"></i>
+                                    </a>
+                                </th>
+                            }
+                            @* <th class="text-center" style="width:110px">Engineering</th> *@
+                            <th class="text-center" style="width:150px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        @if (Model.Roads.Any())
+                        {
+                            @foreach (var road in Model.Roads)
+                            {
+                                <tr id="row-@road.ObjectID">
+
+                                    <!-- Code -->
+                                    <td>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">
+                                            @road.Code
+                                        </span>
+                                    </td>
+
+                                    <!-- Description -->
+                                    <td>@road.Description</td>
+
+                                    <!-- Entered By -->
+                                    <td>@road.EnteredByUser</td>
+
+                                    <!-- Entered Date -->
+                                    <td class="text-muted">
+                                        @road.EnteredDate?.ToString("dd MMM yyyy")
+                                    </td>
+
+                                    <!-- Active -->
+                                    <td class="text-center" id="active-display-@road.ObjectID">
+                                        @if (road.Active == true)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Yes
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border">No</span>
+                                        }
+                                    </td>
+
+                                    <!-- Engineering -->
+                                    @* <td class="text-center" id="eng-display-@road.ObjectID">
+                                        @if (road.Engineering == true)
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Yes
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border">No</span>
+                                        }
+                                    </td> *@
+
+                                    <!-- Actions -->
+                                    <td class="text-center">
+                                        <!-- View mode buttons -->
+                                        <div id="actions-view-@road.ObjectID">
+                                            <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+                                                    onclick="startEdit(@road.ObjectID, @(road.Active == true ? "true" : "false"), @(road.Engineering == true ? "true" : "false"))"
+                                                    title="Inline Edit">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm py-0 px-2 ms-1"
+                                                    onclick="deleteRow(@road.ObjectID)"
+                                                    title="Delete">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </div>
+
+                                        <!-- Edit mode buttons (hidden initially) -->
+                                        <div id="actions-edit-@road.ObjectID" style="display:none">
+                                            <button class="btn btn-success btn-sm py-0 px-2"
+                                                    id="save-btn-@road.ObjectID"
+                                                    onclick="saveRow(@road.ObjectID)"
+                                                    title="Save">
+                                                <i class="bi bi-check-lg"></i> Save
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm py-0 px-2 ms-1"
+                                                    onclick="cancelEdit(@road.ObjectID)"
+                                                    title="Cancel">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No roads found. Try adjusting your search or filters.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                <small class="text-muted">
+                    Showing
+                    <strong>@((Model.CurrentPage - 1) * Model.PageSize + 1)–@Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount)</strong>
+                    of <strong>@Model.TotalCount</strong> records
+                </small>
+
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+
+                        <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = 1 })">«</a>
+                        </li>
+
+                        <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.CurrentPage - 1 })">‹</a>
+                        </li>
+
+                        @{
+                            int startPage = Math.Max(1, Model.CurrentPage - 2);
+                            int endPage   = Math.Min(Model.TotalPages, startPage + 4);
+                            startPage     = Math.Max(1, endPage - 4);
+                        }
+
+                        @for (int p = startPage; p <= endPage; p++)
+                        {
+                            <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = p })">@p</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.CurrentPage + 1 })">›</a>
+                        </li>
+
+                        <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.TotalPages })">»</a>
+                        </li>
+
+                    </ul>
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ===================== ADD NEW MODAL ===================== -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="addModalLabel">
+                    <i class="bi bi-plus-circle me-2 text-primary"></i>Add New Road
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Code <span class="text-danger">*</span></label>
+                    <input type="text" id="newCode" class="form-control form-control-sm"
+                           placeholder="e.g. RD001" maxlength="50">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Description</label>
+                    <input type="text" id="newDescription" class="form-control form-control-sm"
+                           placeholder="Road description…" maxlength="100">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Entered By</label>
+                    <input type="text" class="form-control form-control-sm bg-light text-muted"
+                           id="newEnteredByUser" value="@User.Identity?.Name" readonly>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Entered Date</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-clock text-primary"></i>
+                        </span>
+                        <input type="text" class="form-control bg-light text-muted"
+                               id="autoDateDisplay" readonly>
+                    </div>
+                    <div class="form-text">Recorded automatically when saved.</div>
+                </div>
+
+                <div id="modalError" class="alert alert-danger py-2 small d-none mt-2" role="alert"></div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveNewBtn" onclick="saveNew()">
+                    <i class="bi bi-save me-1"></i>Save Road
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+    <div id="liveToast" class="toast align-items-center border-0 shadow" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold small" id="toastMessage">Saved.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+<script>
+    const token   = document.querySelector('input[name="__RequestVerificationToken"]').value;
+    const bsModal = new bootstrap.Modal(document.getElementById('addModal'));
+    const bsToast = new bootstrap.Toast(document.getElementById('liveToast'), { delay: 3000 });
+
+    // ── Open modal ────────────────────────────────────────────────
+    function openAddModal() {
+        ['newCode','newDescription'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('modalError').classList.add('d-none');
+        const now = new Date();
+        document.getElementById('autoDateDisplay').value =
+            now.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) + ' ' +
+            now.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+        bsModal.show();
+        setTimeout(() => document.getElementById('newCode').focus(), 300);
+    }
+
+    // ── Save new road ─────────────────────────────────────────────
+    async function saveNew() {
+        const code  = document.getElementById('newCode').value.trim();
+        const desc  = document.getElementById('newDescription').value.trim();
+        const errEl = document.getElementById('modalError');
+
+        if (!code) {
+            errEl.textContent = 'Code is required.';
+            errEl.classList.remove('d-none');
+            document.getElementById('newCode').focus();
+            return;
+        }
+
+        const btn = document.getElementById('saveNewBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+        errEl.classList.add('d-none');
+
+        try {
+            const res  = await fetch('@Url.Action("Create","Road")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ Code: code, Description: desc, __RequestVerificationToken: token })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                bsModal.hide();
+                showToast('Road added successfully!', 'success');
+                setTimeout(() => location.reload(), 900);
+            } else {
+                errEl.textContent = data.message || 'Failed to save.';
+                errEl.classList.remove('d-none');
+            }
+        } catch {
+            errEl.textContent = 'Network error. Please try again.';
+            errEl.classList.remove('d-none');
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-save me-1"></i>Save Road';
+    }
+
+    document.querySelectorAll('#addModal .form-control:not([readonly])').forEach(el => {
+        el.addEventListener('keydown', e => { if (e.key === 'Enter') saveNew(); });
+    });
+
+    // ── Inline Edit ───────────────────────────────────────────────
+    function startEdit(id, activeVal, engVal) {
+        document.getElementById('row-' + id).classList.add('table-warning');
+
+        document.getElementById('active-display-' + id).innerHTML = `
+            <div class="form-check form-switch d-flex justify-content-center mb-0">
+                <input class="form-check-input" type="checkbox" id="edit-active-${id}" role="switch" ${activeVal ? 'checked' : ''}>
+            </div>`;
+
+        document.getElementById('actions-view-' + id).style.display = 'none';
+        document.getElementById('actions-edit-' + id).style.display = 'block';
+    }
+
+    function cancelEdit() { location.reload(); }
+
+    async function saveRow(id) {
+        const active      = document.getElementById('edit-active-' + id)?.checked ?? false;
+        const engineering = false; // Engineering column currently hidden/disabled
+        const btn         = document.getElementById('save-btn-' + id);
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const res  = await fetch('@Url.Action("InlineEdit","Road")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ objectId: id, active, engineering, __RequestVerificationToken: token })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                document.getElementById('active-display-' + id).innerHTML = boolBadge(active);
+
+                const row = document.getElementById('row-' + id);
+                row.classList.replace('table-warning', 'table-success');
+                setTimeout(() => row.classList.remove('table-success'), 1500);
+
+                document.getElementById('actions-view-' + id).style.display = 'block';
+                document.getElementById('actions-edit-' + id).style.display = 'none';
+                showToast('Changes saved.', 'success');
+            } else {
+                showToast(data.message || 'Save failed.', 'danger');
+            }
+        } catch {
+            showToast('Network error.', 'danger');
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
+    }
+
+    function boolBadge(val) {
+        return val
+            ? `<span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Yes</span>`
+            : `<span class="badge bg-secondary-subtle text-secondary border">No</span>`;
+    }
+
+    // ── Soft Delete ───────────────────────────────────────────────
+    async function deleteRow(id) {
+        if (!confirm('Delete this road record?')) return;
+        try {
+            const res  = await fetch('@Url.Action("SoftDelete","Road")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ id, __RequestVerificationToken: token })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const row = document.getElementById('row-' + id);
+                row.style.transition = 'opacity 0.4s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 400);
+                showToast('Record deleted.', 'success');
+            } else {
+                showToast(data.message || 'Delete failed.', 'danger');
+            }
+        } catch {
+            showToast('Network error.', 'danger');
+        }
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function showToast(message, type = 'success') {
+        document.getElementById('liveToast').className = `toast align-items-center border-0 shadow text-bg-${type}`;
+        document.getElementById('toastMessage').textContent = message;
+        bsToast.show();
+    }
+
+    // ── Search debounce ───────────────────────────────────────────
+    let searchTimer;
+    document.getElementById('searchInput').addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => document.getElementById('filterForm').submit(), 500);
+    });
+</script>
+}

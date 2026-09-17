@@ -1,0 +1,578 @@
+﻿
+@model CostAccounting.Models.MaterialIndexVM
+@{
+    ViewData["Title"] = "Materials";
+
+    string sortCol = (ViewBag.SortColumn as string) ?? "Code";
+    string sortDir = (ViewBag.SortDir as string) ?? "asc";
+}
+
+@Html.AntiForgeryToken()
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h4 class="mb-0 fw-semibold">Materials</h4>
+    </div>
+    <button class="btn btn-primary btn-sm" id="btnOpenAdd">
+        <i class="bi bi-plus-lg me-1"></i>Add Material
+    </button>
+</div>
+
+<!-- Search & Filter Toolbar -->
+<form method="get" id="filterForm">
+
+    <input type="hidden" name="sortColumn" id="sortColumnInput" value="@sortCol" />
+    <input type="hidden" name="sortDir" id="sortDirectionInput" value="@sortDir" />
+
+    <div class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-center">
+
+                <!-- Search -->
+                <div class="col-md-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+
+                        <input type="text"
+                               name="searchTerm"
+                               id="searchInput"
+                               value="@Model.SearchTerm"
+                               class="form-control form-control-sm"
+                               placeholder="Search code, description, vendor, contract…" />
+                    </div>
+                </div>
+
+                <!-- Status Filter -->
+                <div class="col-auto">
+                    <div class="input-group input-group-sm">
+                        <label class="input-group-text bg-white">
+                            Status
+                        </label>
+
+                        <select name="filterActive"
+                                id="filterActive"
+                                class="form-select form-select-sm"
+                                onchange="document.getElementById('filterForm').submit()">
+
+                            <option value=""
+                                    selected="@(Model.FilterActive == null ? "selected" : null)">
+                                All
+                            </option>
+
+                            <option value="true"
+                                    selected="@(Model.FilterActive == true ? "selected" : null)">
+                                Active
+                            </option>
+
+                            <option value="false"
+                                    selected="@(Model.FilterActive == false ? "selected" : null)">
+                                Inactive
+                            </option>
+
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="col-auto">
+                    <div class="input-group input-group-sm">
+                        <label class="input-group-text bg-white">
+                            Type
+                        </label>
+
+                        <select name="filterTypeId"
+                                id="filterTypeId"
+                                class="form-select form-select-sm"
+                                onchange="document.getElementById('filterForm').submit()">
+
+                            <option value="">All</option>
+
+                            @foreach (var ut in Model.UnitTypes)
+                            {
+                                if (Model.FilterTypeId == ut.ObjectID)
+                                {
+                                    <option value="@ut.ObjectID" selected>
+                                        @ut.Code
+                                    </option>
+                                }
+                                else
+                                {
+                                    <option value="@ut.ObjectID">
+                                        @ut.Code
+                                    </option>
+                                }
+                            }
+
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Search Button -->
+                <div class="col-auto">
+                    <button type="submit"
+                            class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-search me-1"></i>
+                        Search
+                    </button>
+                </div>
+
+                <!-- Clear Button -->
+                @if (!string.IsNullOrEmpty(Model.SearchTerm)
+                    || Model.FilterActive.HasValue
+                    || Model.FilterTypeId.HasValue)
+                {
+                    <div class="col-auto">
+                        <a href="@Url.Action("Index")"
+                           class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-x-circle me-1"></i>
+                            Refresh
+                        </a>
+                    </div>
+                }
+
+                <!-- Record Count -->
+                <div class="col-auto ms-auto">
+                    <span id="recordCountBadge"
+                          class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                        @Model.TotalCount record@(Model.TotalCount != 1 ? "s" : "")
+                    </span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</form>
+
+<div id="tableSection">
+    @await Html.PartialAsync("_MaterialsTable", Model)
+</div>
+
+
+<div class="modal fade" id="modalAdd" tabindex="-1" aria-labelledby="modalAddLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow">
+
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title mb-0" id="modalAddLabel">
+                    <i class="bi bi-plus-circle me-2"></i>Add New Material
+                </h6>
+                <button type="button" class="btn-close btn-close-white btn-sm"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body pb-2">
+                <div id="addAlertArea"></div>
+                <div class="row g-3">
+
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm fw-semibold">
+                            Code <span class="text-danger">*</span>
+                        </label>
+                        <input id="add_Code" type="text"
+                               class="form-control form-control-sm"
+                               placeholder="e.g. MAT-001" />
+                        <div class="invalid-feedback">Code is required.</div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label form-label-sm fw-semibold">Description</label>
+                        <input id="add_Description" type="text"
+                               class="form-control form-control-sm" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm fw-semibold">Effective Date</label>
+                        <input id="add_EffectiveDate" type="date"
+                               class="form-control form-control-sm" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm fw-semibold">Vendor Name</label>
+                        <input id="add_VendorName" type="text"
+                               class="form-control form-control-sm" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm fw-semibold">Contract #</label>
+                        <input id="add_Contract" type="text"
+                               class="form-control form-control-sm"
+                               placeholder="e.g. CON-2024-01" />
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label form-label-sm fw-semibold">Unit Type</label>
+                        <select id="add_UnitTypeObjectID" class="form-select form-select-sm">
+                            <option value="">— Select —</option>
+                            @foreach (var ut in Model.UnitTypes)
+                            {
+                                <option value="@ut.ObjectID">@ut.Code</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 d-flex align-items-end pb-1">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox"
+                                   id="add_Active" checked />
+                            <label class="form-check-label form-label-sm fw-semibold"
+                                   for="add_Active">Active</label>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary" id="btnSaveAdd">
+                    <span id="btnSaveAddSpinner"
+                          class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
+                    <i class="bi bi-floppy me-1"></i>Save
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="modalDelete" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow">
+
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title mb-0">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Confirm Delete
+                </h6>
+                <button type="button" class="btn-close btn-close-white btn-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body text-center py-3">
+                <p class="mb-1">Delete material</p>
+                <p class="fw-bold mb-0" id="deleteCodeLabel"></p>
+                <small class="text-muted">This action cannot be undone.</small>
+            </div>
+
+            <div class="modal-footer py-2 justify-content-center">
+                <button type="button" class="btn btn-sm btn-secondary"
+                        data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-danger" id="btnConfirmDelete">
+                    <span id="btnDeleteSpinner"
+                          class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
+                    Delete
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999">
+    <div id="appToast" class="toast align-items-center border-0" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMsg"></div>
+            <button type="button" class="btn-close me-2 m-auto"
+                    data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+<script>
+(function () {
+    'use strict';
+
+    let sortCol  = '@sortCol';
+    let sortDir  = '@sortDir';
+    let curPage  = @Model.CurrentPage;
+
+    const $ = id => document.getElementById(id);
+
+    function toFormData(data) {
+        const fd = new FormData();
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (token) fd.append('__RequestVerificationToken', token.value);
+        for (const [key, val] of Object.entries(data)) {
+            if (val !== null && val !== undefined) fd.append(key, val);
+        }
+        return fd;
+    }
+
+    async function apiPost(url, data) {
+        const res = await fetch(url, {
+            method: 'POST',
+            body:   toFormData(data)
+        });
+        if (!res.ok) {
+            const txt = await res.text();
+            throw new Error(txt || res.statusText);
+        }
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message ?? 'Request failed.');
+        return json;
+    }
+
+    function showToast(msg, type = 'success') {
+        const toast = $('appToast');
+        $('toastMsg').textContent = msg;
+        toast.className = `toast align-items-center border-0 text-bg-${type}`;
+        bootstrap.Toast.getOrCreateInstance(toast, { delay: 3000 }).show();
+    }
+
+    function buildQS(page) {
+
+    const p = new URLSearchParams();
+
+    const search = $('searchInput')?.value;
+    const active = $('filterActive')?.value;
+    const typeId = $('filterTypeId')?.value;
+
+    if (search)
+        p.set('searchTerm', search);
+
+    if (active)
+        p.set('filterActive', active);
+
+    if (typeId)
+        p.set('filterTypeId', typeId);
+
+    p.set('sortColumn', sortCol);
+    p.set('sortDir', sortDir);
+    p.set('page', page);
+    p.set('pageSize', 15);
+
+    return p.toString();
+}
+
+    async function reloadTable(page) {
+        curPage = page;
+        try {
+            const res = await fetch(`@Url.Action("Index")?${buildQS(page)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            $('tableSection').innerHTML = await res.text();
+            bindTableEvents();
+            updateRecordCount();
+        } catch (e) {
+            showToast('Failed to load table.', 'danger');
+        }
+    }
+
+    function updateRecordCount() {
+        const footerText = document.querySelector('#tableSection .card-footer small.text-muted');
+        if (footerText) {
+            const match = footerText.textContent.match(/of\s+(\d+)/);
+            if (match) {
+                const total = +match[1];
+                $('recordCountBadge').textContent = `${total} record${total !== 1 ? 's' : ''}`;
+                return;
+            }
+        }
+        const rows = document.querySelectorAll('#tableSection tbody tr[id^="row-"]').length;
+        $('recordCountBadge').textContent = `${rows} record${rows !== 1 ? 's' : ''}`;
+    }
+
+    $('filterActive')?.addEventListener('change', () => reloadTable(1));
+    $('filterTypeId')?.addEventListener('change', () => reloadTable(1));
+    // ── Search debounce ───────────────────────────────────────────────
+let searchTimer;
+
+$('searchInput')?.addEventListener('input', function () {
+
+    clearTimeout(searchTimer);
+
+    searchTimer = setTimeout(() => {
+        reloadTable(1);
+    }, 500);
+
+});
+
+    // ── RESET / CLEAR ────────────────────────────────────────────────────
+    $('btnResetFilters')?.addEventListener('click', () => {
+        $('searchTerm').value = '';
+        $('filterActive').value = '';
+        $('filterTypeId').value = '';
+        sortCol = 'Code';
+        sortDir = 'asc';
+        reloadTable(1);
+    });
+
+    function bindTableEvents() {
+
+        document.querySelectorAll('.sortable[data-sort]').forEach(th => {
+            th.style.cursor = 'pointer';
+            th.style.userSelect = 'none';
+            th.addEventListener('click', () => {
+                const col = th.dataset.sort;
+                if (sortCol.toLowerCase() === col.toLowerCase()) {
+                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortCol = col;
+                    sortDir = 'asc';
+                }
+                reloadTable(1);
+            });
+        });
+
+        document.querySelectorAll('[data-page]').forEach(btn => {
+            btn.addEventListener('click', () => reloadTable(+btn.dataset.page));
+        });
+
+        document.querySelectorAll('.btn-edit').forEach(btn => {
+            btn.addEventListener('click', () => enterEdit(btn.dataset.id));
+        });
+
+        document.querySelectorAll('.btn-save').forEach(btn => {
+            btn.addEventListener('click', () => saveInline(btn.dataset.id));
+        });
+
+        document.querySelectorAll('.btn-cancel').forEach(btn => {
+            btn.addEventListener('click', () => reloadTable(curPage));
+        });
+
+        document.querySelectorAll('.btn-delete').forEach(btn => {
+            btn.addEventListener('click', () => openDeleteModal(btn.dataset.id, btn.dataset.code));
+        });
+    }
+
+    function enterEdit(id) {
+        const row = document.getElementById('row-' + id);
+        row.querySelectorAll('.cell-view') .forEach(el => el.classList.add('d-none'));
+        row.querySelectorAll('.cell-input').forEach(el => el.classList.remove('d-none'));
+        row.querySelector('.btn-edit')  .classList.add('d-none');
+        row.querySelector('.btn-delete').classList.add('d-none');
+        row.querySelector('.btn-save')  .classList.remove('d-none');
+        row.querySelector('.btn-cancel').classList.remove('d-none');
+        row.querySelector('.cell-input:not(select)')?.focus();
+    }
+
+    async function saveInline(id) {
+        const row = document.getElementById('row-' + id);
+        const get = field => {
+            const el = row.querySelector(`[data-field="${field}"]`);
+            if (!el) return null;
+            if (el.type === 'checkbox') return el.checked;
+            return el.value || null;
+        };
+
+        const payload = {
+            objectID:         +id,
+            description:      get('description'),
+            effectiveDate:    get('effectiveDate'),
+            vendorName:       get('vendorName'),
+            contract:         get('contract'),
+            unitTypeObjectID: get('unitTypeObjectID') ? +get('unitTypeObjectID') : null,
+            active:           get('active')
+        };
+
+        const saveBtn = row.querySelector('.btn-save');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            await apiPost('@Url.Action("Update", "Material")', payload);
+            showToast('Saved successfully.');
+            reloadTable(curPage);
+        } catch (err) {
+            showToast('Save failed: ' + err.message, 'danger');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="bi bi-check-lg"></i>';
+        }
+    }
+
+    let pendingDeleteId = null;
+
+    function openDeleteModal(id, code) {
+        pendingDeleteId = id;
+        $('deleteCodeLabel').textContent = code ?? ('ID ' + id);
+        bootstrap.Modal.getOrCreateInstance($('modalDelete')).show();
+    }
+
+    $('btnConfirmDelete').addEventListener('click', async () => {
+        if (!pendingDeleteId) return;
+        const spinner = $('btnDeleteSpinner');
+        spinner.classList.remove('d-none');
+        $('btnConfirmDelete').disabled = true;
+
+        try {
+            await apiPost('@Url.Action("Delete", "Material")', { id: +pendingDeleteId });
+            bootstrap.Modal.getInstance($('modalDelete')).hide();
+            showToast('Material deleted.');
+            reloadTable(1);
+        } catch (err) {
+            showToast('Delete failed: ' + err.message, 'danger');
+        } finally {
+            spinner.classList.add('d-none');
+            $('btnConfirmDelete').disabled = false;
+            pendingDeleteId = null;
+        }
+    });
+
+    $('btnOpenAdd').addEventListener('click', () => {
+        ['add_Code','add_Description','add_VendorName','add_Contract'].forEach(id => { $(id).value = ''; $(id).classList.remove('is-invalid'); });
+        $('add_EffectiveDate').value = '';
+        $('add_UnitTypeObjectID').value = '';
+        $('add_Active').checked = true;
+        $('addAlertArea').innerHTML = '';
+        bootstrap.Modal.getOrCreateInstance($('modalAdd')).show();
+    });
+
+    $('btnSaveAdd').addEventListener('click', async () => {
+        const codeEl = $('add_Code');
+        if (!codeEl.value.trim()) {
+            codeEl.classList.add('is-invalid');
+            codeEl.focus();
+            return;
+        }
+        codeEl.classList.remove('is-invalid');
+
+        const payload = {
+            code:             codeEl.value.trim(),
+            description:      $('add_Description').value   || null,
+            effectiveDate:    $('add_EffectiveDate').value  || null,
+            vendorName:       $('add_VendorName').value     || null,
+            contract:         $('add_Contract').value       || null,
+            unitTypeObjectID: $('add_UnitTypeObjectID').value
+                              ? +$('add_UnitTypeObjectID').value : null,
+            active:           $('add_Active').checked
+        };
+
+        const spinner = $('btnSaveAddSpinner');
+        spinner.classList.remove('d-none');
+        $('btnSaveAdd').disabled = true;
+
+        try {
+            await apiPost('@Url.Action("Create", "Material")', payload);
+            bootstrap.Modal.getInstance($('modalAdd')).hide();
+            showToast('Material added successfully.');
+            reloadTable(1);
+        } catch (err) {
+            $('addAlertArea').innerHTML =
+                `<div class="alert alert-danger alert-sm py-1 px-2 small mb-2">
+                    <i class="bi bi-exclamation-circle me-1"></i>${err.message}
+                </div>`;
+        } finally {
+            spinner.classList.add('d-none');
+            $('btnSaveAdd').disabled = false;
+        }
+    });
+
+    $('modalAdd').addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            $('btnSaveAdd').click();
+        }
+    });
+
+    bindTableEvents();
+
+})();
+</script>
+}

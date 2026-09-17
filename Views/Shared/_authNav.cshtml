@@ -1,0 +1,28 @@
+@* Include this partial in your shared _Layout.cshtml, inside <body>, e.g.:
+   <partial name="_AuthNav" />
+   It only renders anything once the user is signed in. *@
+
+@if (User.Identity != null && User.Identity.IsAuthenticated)
+{
+    <nav class="navbar navbar-expand navbar-dark bg-dark px-3">
+        <a class="navbar-brand" asp-controller="Home" asp-action="Index">MyApp</a>
+
+        <div class="navbar-nav me-auto">
+            <a class="nav-link text-light" asp-controller="Profile" asp-action="Index">My Profile</a>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <a class="nav-link text-light" asp-controller="Users" asp-action="Index">Manage Users</a>
+            }
+        </div>
+
+        <span class="navbar-text text-light me-3">
+            Signed in as <strong>@User.Identity.Name</strong> (@User.FindFirst("FullName")?.Value)
+        </span>
+
+        <form asp-controller="User_Account" asp-action="Logout" method="post" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-outline-light btn-sm">Log Out</button>
+        </form>
+    </nav>
+}

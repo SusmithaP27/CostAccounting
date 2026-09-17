@@ -1,0 +1,122 @@
+@model CostAccounting.Models.LoginVM
+@{
+    Layout = "_LoginLayout";
+    ViewData["Title"] = "Sign In";
+}
+
+<div class="login-wrap d-flex min-vh-100">
+
+    <!-- ── Left brand panel ─────────────────────────────────────────── -->
+    <div class="login-brand d-none d-lg-flex flex-column justify-content-between text-white p-5">
+        <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center justify-content-center rounded-2 bg-white bg-opacity-25"
+                 style="width:34px;height:34px">
+                <i class="bi bi-bar-chart-fill" style="font-size:16px"></i>
+            </div>
+            <span class="fw-bold fs-5">Cost Accounting</span>
+        </div>
+
+        <div>
+            <h2 class="fw-bold mb-3">Welcome back.</h2>
+            <p class="text-white-50 mb-0" style="max-width:340px">
+                Sign in to manage materials, equipment, employees, and rates
+                from one place.
+            </p>
+        </div>
+
+        <div class="text-white-50 small">&copy;  Cost Accounting</div>
+    </div>
+
+    <!-- ── Right form panel ─────────────────────────────────────────── -->
+    <div class="login-form-panel d-flex align-items-center justify-content-center flex-grow-1 bg-light">
+        <div class="login-card bg-white shadow-sm rounded-4 p-4 p-md-5">
+
+            <div class="d-lg-none d-flex align-items-center gap-2 mb-4">
+                <div class="d-flex align-items-center justify-content-center rounded-2 bg-primary"
+                     style="width:30px;height:30px">
+                    <i class="bi bi-bar-chart-fill text-white" style="font-size:14px"></i>
+                </div>
+                <span class="fw-bold">Cost Accounting</span>
+            </div>
+
+            <h4 class="fw-bold mb-1">Sign in</h4>
+            <p class="text-secondary small mb-4">Enter your credentials to continue.</p>
+
+            <form asp-action="Login" asp-route-returnUrl="@ViewData["ReturnUrl"]" method="post" novalidate>
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small mb-3"></div>
+
+                <div class="mb-3">
+                    <label asp-for="Username" class="form-label small fw-semibold text-secondary"></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-person text-secondary"></i></span>
+                        <input asp-for="Username" class="form-control border-start-0 ps-0" autofocus autocomplete="username" placeholder="Enter your username" />
+                    </div>
+                    <span asp-validation-for="Username" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label small fw-semibold text-secondary"></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-lock text-secondary"></i></span>
+                        <input asp-for="Password" class="form-control border-start-0 border-end-0 ps-0" autocomplete="current-password" placeholder="Enter your password" id="pwd-input" />
+                        <button class="input-group-text bg-white border-start-0" type="button" id="pwd-toggle" tabindex="-1">
+                            <i class="bi bi-eye text-secondary" id="pwd-icon"></i>
+                        </button>
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-check-label small text-secondary"></label>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-brand {
+        width: 42%;
+        background: linear-gradient(160deg, #16213e 0%, #1a2b52 45%, #274690 100%);
+    }
+    .login-form-panel { width: 58%; }
+    .login-card { width: 100%; max-width: 400px; }
+    .login-wrap .form-control:focus,
+    .login-wrap .input-group:focus-within .input-group-text,
+    .login-wrap .input-group:focus-within .form-control {
+        border-color: #4f8ef7;
+        box-shadow: none;
+    }
+    .login-wrap .btn-primary {
+        background-color: #4f8ef7;
+        border-color: #4f8ef7;
+    }
+    .login-wrap .btn-primary:hover {
+        background-color: #3d7de6;
+        border-color: #3d7de6;
+    }
+    @@media (max-width: 991.98px) {
+        .login-form-panel { width: 100%; }
+    }
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('pwd-toggle').addEventListener('click', function () {
+            const input = document.getElementById('pwd-input');
+            const icon = document.getElementById('pwd-icon');
+            const isPwd = input.type === 'password';
+            input.type = isPwd ? 'text' : 'password';
+            icon.classList.toggle('bi-eye', !isPwd);
+            icon.classList.toggle('bi-eye-slash', isPwd);
+        });
+    </script>
+}

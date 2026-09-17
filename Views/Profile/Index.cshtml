@@ -1,0 +1,30 @@
+@model CostAccounting.Models.ProfileVM
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<h3>My Profile</h3>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+}
+
+<dl class="row">
+    <dt class="col-sm-3">Username</dt>
+    <dd class="col-sm-9">@Model.Username</dd>
+
+    <dt class="col-sm-3">Full Name</dt>
+    <dd class="col-sm-9">@Model.FullName</dd>
+
+    <dt class="col-sm-3">Email</dt>
+    <dd class="col-sm-9">@Model.Email</dd>
+
+    <dt class="col-sm-3">Role</dt>
+    <dd class="col-sm-9">@Model.Role</dd>
+
+    <dt class="col-sm-3">Last Login</dt>
+    <dd class="col-sm-9">@(Model.LastLoginDate?.ToString("g") ?? "Never")</dd>
+</dl>
+
+<a asp-controller="Profile" asp-action="ChangePassword" class="btn btn-secondary">Change Password</a>

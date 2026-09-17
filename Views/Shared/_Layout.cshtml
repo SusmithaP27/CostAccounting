@@ -1,0 +1,372 @@
+﻿@* This is YOUR layout file, saved back here with two fixes applied:
+   1. Removed <partial name="_AuthNav" /> - you already have your own
+      topbar with a user dropdown, so that partial was a second navbar
+      stacked on top of it. Delete it from your real project file too.
+   2. The "Sign out" link was a GET <a href="/Account/Logout">, which
+      can't work: Logout is [HttpPost]-only (CSRF protection) and the
+      controller is now User_Account, not Account. Replaced with a
+      small POST form carrying the antiforgery token. *@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Cost Accounting</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        .sidebar { width: 240px; min-height: 100vh; transition: width .2s; }
+        .sidebar.collapsed { width: 56px; }
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .nav-label,
+        .sidebar.collapsed .nav-arrow,
+        .sidebar.collapsed .submenu { display: none !important; }
+        .sidebar.collapsed .nav-link { justify-content: center !important; padding-left: 0 !important; padding-right: 0 !important; }
+        .sidebar .nav-link.active-parent { background-color: rgba(255,255,255,.1); }
+        .sidebar .submenu .nav-link { padding-left: 2.75rem !important; font-size: .8125rem; }
+        .sidebar .submenu .nav-link.active::after {
+            content: '';
+            position: absolute;
+            left: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 5px; height: 5px;
+            background: #4f8ef7;
+            border-radius: 50%;
+        }
+        .sidebar .nav-link.active { border-left: 3px solid #4f8ef7; }
+        .sidebar .nav-link:not(.active) { border-left: 3px solid transparent; }
+        .main-area { margin-left: 240px; transition: margin-left .2s; min-height: 100vh; }
+        .main-area.expanded { margin-left: 56px; }
+        .topbar { height: 56px; }
+        body { overflow-x: hidden; }
+    </style>
+</head>
+<body class="bg-light">
+
+    @{
+        var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+        var matOpen = ctrl is "Material" or "MaterialRate";
+        var equOpen = ctrl is "Equipment" or "EquipmentRate";
+        var empOpen = ctrl is "Employee" or "EmployeeRate";
+    }
+
+    <div class="d-flex">
+
+        <aside id="sidebar"
+               class="sidebar d-flex flex-column flex-shrink-0 bg-dark text-white position-fixed top-0 start-0 vh-100 overflow-y-auto overflow-x-hidden z-3"
+               style="z-index:1020">
+
+            <a href="@Url.Action("Index","Home")"
+               class="d-flex align-items-center gap-2 px-3 text-white text-decoration-none border-bottom border-secondary"
+               style="height:56px;min-height:56px">
+                <div class="d-flex align-items-center justify-content-center rounded-2 bg-primary flex-shrink-0"
+                     style="width:28px;height:28px">
+                    <i class="bi bi-bar-chart-fill text-white" style="font-size:13px"></i>
+                </div>
+                <span class="nav-text fw-bold fs-6">Cost Accounting</span>
+            </a>
+
+            <nav class="flex-grow-1 pt-2 pb-4">
+                <ul class="nav flex-column px-0 mb-0">
+
+                    <li class="nav-item mt-3 mb-1 px-3">
+                        <span class="nav-label text-uppercase text-secondary fw-semibold"
+                              style="font-size:10px;letter-spacing:.08em">Main</span>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 text-white-50 @(ctrl == "Home" ? "active bg-white bg-opacity-10 text-white" : "hover-bg")"
+                           href="@Url.Action("Index","Home")">
+                            <i class="bi bi-speedometer2 flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-3 mb-1 px-3">
+                        <span class="nav-label text-uppercase text-secondary fw-semibold"
+                              style="font-size:10px;letter-spacing:.08em">Setup</span>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 text-white-50 @(ctrl == "Account" ? "active bg-white bg-opacity-10 text-white" : "")"
+                           href="@Url.Action("Index","Account")">
+                            <i class="bi bi-wallet2 flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text">Accounts</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 text-white-50 @(ctrl == "Allowance" ? "active bg-white bg-opacity-10 text-white" : "")"
+                           href="@Url.Action("Index", "Allowance")">
+                            <i class="bi bi-wallet2 flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text">Allowances</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 text-white-50 @(ctrl == "Road" ? "active bg-white bg-opacity-10 text-white" : "")"
+                           href="@Url.Action("Index","Road")">
+                            <i class="bi bi-sign-turn-right flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text">Roads</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link d-flex align-items-center gap-2 py-2 px-3 w-100 border-0 bg-transparent text-white-50 @(equOpen ? "active-parent text-white" : "")"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#submenu-employees"
+                                aria-expanded="@(empOpen ? "true" : "false")"
+                                aria-controls="submenu-employees">
+                            <i class="bi  bi-people flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text flex-grow-1 text-start">Employees</span>
+                            <i class="bi bi-chevron-right nav-arrow flex-shrink-0"
+                               style="font-size:11px;transition:transform .2s"
+                               id="equ-arrow"></i>
+                        </button>
+                        <ul class="submenu nav flex-column collapse @(empOpen ? "show" : "") bg-black bg-opacity-25 px-0"
+                            id="submenu-employees">
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-2 py-2 text-white-50 position-relative @(ctrl == "Employee" ? "active text-white" : "")"
+                                   href="@Url.Action("Index","Employee")">
+                                    <span class="nav-text">Employees</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-2 py-2 text-white-50 position-relative @(ctrl == "EmployeeRate" ? "active text-white" : "")"
+                                   href="@Url.Action("Index","EmployeeRate")">
+                                    <span class="nav-text">Employee Rates</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link d-flex align-items-center gap-2 py-2 px-3 w-100 border-0 bg-transparent text-white-50 @(matOpen ? "active-parent text-white" : "")"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#submenu-materials"
+                                aria-expanded="@(matOpen ? "true" : "false")"
+                                aria-controls="submenu-materials">
+                            <i class="bi bi-box-seam flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text flex-grow-1 text-start">Materials</span>
+                            <i class="bi bi-chevron-right nav-arrow flex-shrink-0"
+                               style="font-size:11px;transition:transform .2s"
+                               id="mat-arrow"></i>
+                        </button>
+                        <ul class="submenu nav flex-column collapse @(matOpen ? "show" : "") bg-black bg-opacity-25 px-0"
+                            id="submenu-materials">
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-2 py-2 text-white-50 position-relative @(ctrl == "Material" ? "active text-white" : "")"
+                                   href="@Url.Action("Index","Material")">
+                                    <span class="nav-text">Materials</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-2 py-2 text-white-50 position-relative @(ctrl == "MaterialRate" ? "active text-white" : "")"
+                                   href="@Url.Action("Index","MaterialRate")">
+                                    <span class="nav-text">Material Rates</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <button class="nav-link d-flex align-items-center gap-2 py-2 px-3 w-100 border-0 bg-transparent text-white-50 @(equOpen ? "active-parent text-white" : "")"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#submenu-equipments"
+                                aria-expanded="@(equOpen ? "true" : "false")"
+                                aria-controls="submenu-equipments">
+                            <i class="bi bi-tools flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text flex-grow-1 text-start">Equipments</span>
+                            <i class="bi bi-chevron-right nav-arrow flex-shrink-0"
+                               style="font-size:11px;transition:transform .2s"
+                               id="equ-arrow"></i>
+                        </button>
+                        <ul class="submenu nav flex-column collapse @(equOpen ? "show" : "") bg-black bg-opacity-25 px-0"
+                            id="submenu-equipments">
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-2 py-2 text-white-50 position-relative @(ctrl == "Equipment" ? "active text-white" : "")"
+                                   href="@Url.Action("Index","Equipment")">
+                                    <span class="nav-text">Equipments</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center gap-2 py-2 text-white-50 position-relative @(ctrl == "EquipmentRate" ? "active text-white" : "")"
+                                   href="@Url.Action("Index","EquipmentRate")">
+                                    <span class="nav-text">Equipment Rates</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 text-white-50 @(ctrl == "Operation" ? "active bg-white bg-opacity-10 text-white" : "")"
+                           href="@Url.Action("Index","Operation")">
+                            <i class="bi bi-diagram-3 flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text">Operations</span>
+                        </a>
+                    </li>
+
+                </ul>
+            </nav>
+        </aside>
+
+        <div id="mainArea" class="main-area flex-grow-1">
+
+            <header class="topbar d-flex align-items-center px-3 bg-white border-bottom shadow-sm sticky-top"
+                    style="z-index:1030">
+
+                <button id="sidebarToggle"
+                        class="btn btn-sm btn-light border-0 me-2 d-flex align-items-center justify-content-center"
+                        style="width:34px;height:34px"
+                        onclick="toggleSidebar()"
+                        title="Toggle sidebar">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+
+                <span class="fw-semibold text-secondary small d-none d-md-inline">
+                    @ViewData["Title"]
+                </span>
+
+                <div class="ms-auto d-flex align-items-center gap-2">
+
+                    <button class="btn btn-sm btn-light border-0 position-relative d-flex align-items-center justify-content-center"
+                            style="width:34px;height:34px">
+                        <i class="bi bi-bell fs-6 text-secondary"></i>
+                    </button>
+
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-light border rounded-pill d-flex align-items-center gap-2 px-2 py-1"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white fw-semibold flex-shrink-0"
+                                 style="width:26px;height:26px;font-size:11px">
+                                @(User.Identity?.Name?.Length > 0 ? User.Identity.Name.Substring(0,1).ToUpper() : "U")
+                            </div>
+                            <span class="small d-none d-sm-inline">@User.Identity?.Name</span>
+                            <i class="bi bi-chevron-down text-secondary" style="font-size:10px"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 small">
+                            <li>
+                                <span class="dropdown-item-text fw-semibold">@User.Identity?.Name</span>
+                            </li>
+                            <li><hr class="dropdown-divider my-1" /></li>
+                            <li>
+                                <a class="dropdown-item" asp-controller="Profile" asp-action="Index">
+                                    <i class="bi bi-person me-2 text-secondary"></i>Profile
+                                </a>
+                            </li>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Users" asp-action="Index">
+                                        <i class="bi bi-people me-2 text-secondary"></i>Manage Users
+                                    </a>
+                                </li>
+                            }
+                            <li><hr class="dropdown-divider my-1" /></li>
+                            <li>
+                                <form asp-controller="User_Account" asp-action="Logout" method="post" class="px-1">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
+                                        <i class="bi bi-box-arrow-right me-2"></i>Sign out
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </header>
+
+            <main class="p-4">
+
+                @if (TempData["Success"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show small py-2 mb-3 d-flex align-items-center gap-2"
+                         role="alert">
+                        <i class="bi bi-check-circle-fill flex-shrink-0"></i>
+                        @TempData["Success"]
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show small py-2 mb-3 d-flex align-items-center gap-2"
+                         role="alert">
+                        <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+                        @TempData["Error"]
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+
+                @RenderBody()
+
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        const STORAGE_KEY = 'sidebar_collapsed';
+
+        function toggleSidebar() {
+            const sidebar  = document.getElementById('sidebar');
+            const mainArea = document.getElementById('mainArea');
+            const isNowCollapsed = sidebar.classList.toggle('collapsed');
+            mainArea.classList.toggle('expanded', isNowCollapsed);
+            localStorage.setItem(STORAGE_KEY, isNowCollapsed);
+        }
+
+        (function () {
+            if (localStorage.getItem(STORAGE_KEY) === 'true') {
+                document.getElementById('sidebar').classList.add('collapsed');
+                document.getElementById('mainArea').classList.add('expanded');
+            }
+        })();
+
+        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(btn => {
+            const targetId = btn.getAttribute('data-bs-target');
+            const arrow    = btn.querySelector('.nav-arrow');
+            if (!arrow) return;
+
+            const collapseEl = document.querySelector(targetId);
+            if (!collapseEl) return;
+
+            if (collapseEl.classList.contains('show'))
+                arrow.style.transform = 'rotate(90deg)';
+
+            collapseEl.addEventListener('show.bs.collapse',  () => arrow.style.transform = 'rotate(90deg)');
+            collapseEl.addEventListener('hide.bs.collapse',  () => arrow.style.transform = 'rotate(0deg)');
+        });
+
+        function syncTooltips() {
+            const collapsed = document.getElementById('sidebar').classList.contains('collapsed');
+            document.querySelectorAll('#sidebar .nav-link').forEach(el => {
+                const existing = bootstrap.Tooltip.getInstance(el);
+                const label    = el.querySelector('.nav-text')?.textContent?.trim();
+                if (!label) return;
+                if (collapsed && !existing) {
+                    new bootstrap.Tooltip(el, { title: label, placement: 'right', trigger: 'hover' });
+                } else if (!collapsed && existing) {
+                    existing.dispose();
+                }
+            });
+        }
+
+        syncTooltips();
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            setTimeout(syncTooltips, 220);
+        });
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

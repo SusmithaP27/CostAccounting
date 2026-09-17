@@ -1,0 +1,586 @@
+﻿@model CostAccounting.Models.ViewModels.AllowanceIndexVM
+@{
+    ViewData["Title"] = "Allowance Rates";
+
+    string SortLink(string column)
+    {
+        var newDir = (Model.SortColumn == column && Model.SortDirection == "asc") ? "desc" : "asc";
+        return Url.Action("Index", new
+        {
+            filterYear = Model.FilterYear,
+            filterActive = Model.FilterActive,
+            filterSubTypeId = Model.FilterSubTypeId,
+            sortColumn = column,
+            sortDirection = newDir,
+            page = 1
+        });
+    }
+
+    string SortIcon(string column)
+    {
+        if (Model.SortColumn != column) return "";
+        return Model.SortDirection == "asc" ? "bi-caret-up-fill" : "bi-caret-down-fill";
+    }
+
+    bool hasActiveFilters = Model.FilterYear.HasValue
+                          || Model.FilterSubTypeId.HasValue
+                          || Model.FilterActive != true;
+}
+
+<div class="container-fluid py-4">
+
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-0 fw-bold">
+                <i class="bi bi-cash-coin text-primary me-2"></i>Allowance Rates
+            </h4>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+            <i class="bi bi-plus-lg me-1"></i> Add New Allowance
+        </button>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <form method="get" id="filterForm">
+        <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
+        <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <div class="card shadow-sm mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-center">
+
+                    <!-- Year -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm">
+                            <label class="input-group-text bg-white">Year</label>
+                            <input type="number" name="filterYear" value="@Model.FilterYear"
+                                   class="form-control form-control-sm" style="width:100px"
+                                   placeholder="ALL" onchange="document.getElementById('filterForm').submit()" />
+                        </div>
+                    </div>
+
+                    <!-- Type Filter -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm">
+                            <label class="input-group-text bg-white">Type</label>
+                            <select name="filterSubTypeId" class="form-select form-select-sm"
+                                    onchange="document.getElementById('filterForm').submit()">
+                                <option value="">All</option>
+                                @foreach (var st in Model.SubTypes)
+                                {
+                                    if (Model.FilterSubTypeId.HasValue && Model.FilterSubTypeId.Value == st.ObjectID)
+                                    {
+                                        <option value="@st.ObjectID" selected>@st.Code</option>
+                                    }
+                                    else
+                                    {
+                                        <option value="@st.ObjectID">@st.Code</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Active Filter -->
+                    <div class="col-auto">
+                        <div class="input-group input-group-sm">
+                            <label class="input-group-text bg-white">Active</label>
+                            <select name="filterActive" class="form-select form-select-sm"
+                                    onchange="document.getElementById('filterForm').submit()">
+                                <option value="" selected="@(Model.FilterActive == null ? "selected" : null)">All</option>
+                                <option value="true" selected="@(Model.FilterActive == true ? "selected" : null)">Yes</option>
+                                <option value="false" selected="@(Model.FilterActive == false ? "selected" : null)">No</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Clear -->
+                    @if (hasActiveFilters)
+                    {
+                        <div class="col-auto">
+                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-circle me-1"></i>Clear
+                            </a>
+                        </div>
+                    }
+
+                    <!-- Results Count -->
+                    <div class="col-auto ms-auto">
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                            @Model.TotalCount record(s)
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Table Card -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered align-middle mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:100px">
+                                <a href="@SortLink("Year")" class="text-decoration-none text-dark">
+                                    Year <i class="bi @SortIcon("Year")"></i>
+                                </a>
+                            </th>
+                            <th style="width:140px">
+                                <a href="@SortLink("Rate")" class="text-decoration-none text-dark">
+                                    County Benefit <i class="bi @SortIcon("Rate")"></i>
+                                </a>
+                            </th>
+                            <th style="width:130px">
+                                <a href="@SortLink("Type")" class="text-decoration-none text-dark">
+                                    Type <i class="bi @SortIcon("Type")"></i>
+                                </a>
+                            </th>
+                            <th class="text-center" style="width:160px">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        @if (Model.Allowances != null && Model.Allowances.Any())
+                        {
+                            @foreach (var a in Model.Allowances)
+                            {
+                                var activeJs = a.Active == true ? "true" : "false";
+
+                                <tr id="row-@a.ObjectID" data-active="@activeJs" data-subtypeid="@a.AllowanceSubTypeObjectID">
+
+                                    <!-- Year -->
+                                    <td>
+                                        <span id="year-display-@a.ObjectID">@a.Year</span>
+                                        <input id="year-input-@a.ObjectID" type="number"
+                                               class="form-control form-control-sm d-none" value="@a.Year" />
+                                    </td>
+
+                                    <!-- Rate / County Benefit -->
+                                    <td>
+                                        <span id="rate-display-@a.ObjectID">@a.Rate?.ToString("0.0000")</span>
+                                        <input id="rate-input-@a.ObjectID" type="number" step="0.0001"
+                                               class="form-control form-control-sm d-none" value="@a.Rate" />
+                                    </td>
+
+                                    <!-- Type -->
+                                    <td>
+                                        <span id="type-display-@a.ObjectID">
+                                            @{
+                                                var typeCss = a.SubTypeName == "INTERNAL"
+                                                    ? "bg-info-subtle text-info border-info-subtle"
+                                                    : "bg-warning-subtle text-warning border-warning-subtle";
+                                            }
+                                            <span class="badge @typeCss border">@a.SubTypeName</span>
+                                        </span>
+                                        <select id="type-select-@a.ObjectID" class="form-select form-select-sm d-none">
+                                            @foreach (var st in Model.SubTypes)
+                                            {
+                                                if (st.ObjectID == a.AllowanceSubTypeObjectID)
+                                                {
+                                                    <option value="@st.ObjectID" selected>@st.Code</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@st.ObjectID">@st.Code</option>
+                                                }
+                                            }
+                                        </select>
+                                    </td>
+
+                                    <!-- Actions -->
+                                    <td class="text-center">
+                                        <div id="actions-view-@a.ObjectID">
+                                            <button class="btn btn-outline-secondary btn-sm py-0 px-2"
+                                                    onclick="startEdit(@a.ObjectID, @activeJs)" title="Inline Edit">
+                                                <i class="bi bi-pencil-fill"></i>
+                                            </button>
+                                        </div>
+                                        <div id="actions-edit-@a.ObjectID" style="display:none">
+                                            <button class="btn btn-success btn-sm py-0 px-2"
+                                                    id="save-btn-@a.ObjectID" onclick="saveRow(@a.ObjectID)" title="Save">
+                                                <i class="bi bi-check-lg"></i> Save
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm py-0 px-2 ms-1"
+                                                    onclick="cancelEdit(@a.ObjectID)" title="Cancel">
+                                                <i class="bi bi-x-lg"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                    No allowance rates found. Try adjusting your search or filters.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        @if (Model.TotalCount > 0)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                <small class="text-muted">
+                    Showing
+                    <strong>@((Model.CurrentPage - 1) * Model.PageSize + 1)–@Math.Min(Model.CurrentPage * Model.PageSize, Model.TotalCount)</strong>
+                    of <strong>@Model.TotalCount</strong> records
+                </small>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Allowance pagination">
+                        <ul class="pagination pagination-sm mb-0">
+
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { filterYear = Model.FilterYear, filterActive = Model.FilterActive, filterSubTypeId = Model.FilterSubTypeId, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = 1 })">«</a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { filterYear = Model.FilterYear, filterActive = Model.FilterActive, filterSubTypeId = Model.FilterSubTypeId, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.CurrentPage - 1 })">‹</a>
+                            </li>
+
+                            @{
+                                int startPage = Math.Max(1, Model.CurrentPage - 2);
+                                int endPage = Math.Min(Model.TotalPages, startPage + 4);
+                                startPage = Math.Max(1, endPage - 4);
+                            }
+                            @for (int p = startPage; p <= endPage; p++)
+                            {
+                                <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="@Url.Action("Index", new { filterYear = Model.FilterYear, filterActive = Model.FilterActive, filterSubTypeId = Model.FilterSubTypeId, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = p })">@p</a>
+                                </li>
+                            }
+
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { filterYear = Model.FilterYear, filterActive = Model.FilterActive, filterSubTypeId = Model.FilterSubTypeId, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.CurrentPage + 1 })">›</a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@Url.Action("Index", new { filterYear = Model.FilterYear, filterActive = Model.FilterActive, filterSubTypeId = Model.FilterSubTypeId, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.TotalPages })">»</a>
+                            </li>
+
+                        </ul>
+                    </nav>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ===================== ADD NEW MODAL ===================== -->
+<div class="modal fade" id="addModal" tabindex="-1" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="addModalLabel">
+                    <i class="bi bi-plus-circle me-2 text-primary"></i>Add New Allowance
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Year <span class="text-danger">*</span></label>
+                    <input type="number" id="newYear" class="form-control form-control-sm" placeholder="e.g. 2026" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">County Benefit Rate <span class="text-danger">*</span></label>
+                    <input type="number" step="0.0001" id="newRate" class="form-control form-control-sm" placeholder="0.0000" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small">Type <span class="text-danger">*</span></label>
+                    <select id="newSubTypeId" class="form-select form-select-sm">
+                        <option value="">Select type…</option>
+                        @foreach (var st in Model.SubTypes)
+                        {
+                            <option value="@st.ObjectID">@st.Code</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small">Active</label>
+                        <div class="form-check form-switch mt-1">
+                            <input class="form-check-input" type="checkbox" id="newActive" checked />
+                            <label class="form-check-label small" for="newActive">Yes</label>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small">Entered By</label>
+                        <input type="text" class="form-control form-control-sm bg-light text-muted"
+                               id="newEnteredByUser" value="@User.Identity?.Name" readonly />
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold small">Entered Date</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light">
+                            <i class="bi bi-clock text-primary"></i>
+                        </span>
+                        <input type="text" class="form-control bg-light text-muted" id="autoDateDisplay" readonly />
+                    </div>
+                    <div class="form-text">Recorded automatically when saved.</div>
+                </div>
+
+                <div id="modalError" class="alert alert-danger py-2 small d-none mt-2" role="alert"></div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="saveNewBtn" onclick="saveNew()">
+                    <i class="bi bi-save me-1"></i>Save Allowance
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+    <div id="liveToast" class="toast align-items-center border-0 shadow" role="alert" aria-live="assertive">
+        <div class="d-flex">
+            <div class="toast-body fw-semibold small" id="toastMessage">Saved.</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        const subTypes = @Html.Raw(
+                    System.Text.Json.JsonSerializer.Serialize(
+                            Model.SubTypes.Select(t => new { id = t.ObjectID, name = t.Code })
+                    )
+            );
+
+        const token   = document.querySelector('input[name="__RequestVerificationToken"]').value;
+        const bsModal = new bootstrap.Modal(document.getElementById('addModal'));
+        const toastEl = document.getElementById('liveToast');
+
+        function showToast(message, type = 'success') {
+            toastEl.className = `toast align-items-center border-0 shadow text-bg-${type}`;
+            document.getElementById('toastMessage').textContent = message;
+            bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000 }).show();
+        }
+
+        function openAddModal() {
+            document.getElementById('newYear').value = '';
+            document.getElementById('newRate').value = '';
+            document.getElementById('newSubTypeId').value = '';
+            document.getElementById('newActive').checked = true;
+            document.getElementById('modalError').classList.add('d-none');
+
+            const now = new Date();
+            document.getElementById('autoDateDisplay').value =
+                now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) +
+                ' ' + now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+            bsModal.show();
+            setTimeout(() => document.getElementById('newYear').focus(), 300);
+        }
+
+        async function saveNew() {
+            const year   = document.getElementById('newYear').value;
+            const rate   = document.getElementById('newRate').value;
+            const typeId = document.getElementById('newSubTypeId').value;
+            const active = document.getElementById('newActive').checked;
+            const errEl  = document.getElementById('modalError');
+
+            if (!year) {
+                errEl.textContent = 'Year is required.';
+                errEl.classList.remove('d-none');
+                document.getElementById('newYear').focus();
+                return;
+            }
+            if (!rate) {
+                errEl.textContent = 'Rate is required.';
+                errEl.classList.remove('d-none');
+                document.getElementById('newRate').focus();
+                return;
+            }
+            if (!typeId) {
+                errEl.textContent = 'Please select a type.';
+                errEl.classList.remove('d-none');
+                document.getElementById('newSubTypeId').focus();
+                return;
+            }
+
+            const btn = document.getElementById('saveNewBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving…';
+            errEl.classList.add('d-none');
+
+            try {
+                const res = await fetch('@Url.Action("Create", "Allowance")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        Year: year,
+                        Rate: rate,
+                        AllowanceSubTypeObjectID: typeId,
+                        Active: active,
+                        __RequestVerificationToken: token
+                    })
+                });
+
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/json'))
+                    throw new Error('Unexpected server response. Please refresh and try again.');
+
+                const data = await res.json();
+
+                if (data.success) {
+                    bsModal.hide();
+                    showToast('Allowance added successfully!', 'success');
+                    setTimeout(() => location.reload(), 900);
+                } else {
+                    errEl.textContent = data.message || 'Failed to save.';
+                    errEl.classList.remove('d-none');
+                }
+            } catch (err) {
+                errEl.textContent = err.message || 'Network error. Please try again.';
+                errEl.classList.remove('d-none');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-save me-1"></i>Save Allowance';
+        }
+
+        document.querySelectorAll('#addModal .form-control:not([readonly]), #addModal .form-select').forEach(el => {
+            el.addEventListener('keydown', e => { if (e.key === 'Enter') saveNew(); });
+        });
+
+        // ── Inline Edit — start ───────────────────────────────────────
+        function startEdit(id, activeVal) {
+            document.getElementById('row-' + id).classList.add('table-warning');
+
+            document.getElementById('year-display-' + id).classList.add('d-none');
+            document.getElementById('year-input-' + id).classList.remove('d-none');
+
+            document.getElementById('rate-display-' + id).classList.add('d-none');
+            document.getElementById('rate-input-' + id).classList.remove('d-none');
+
+            document.getElementById('type-display-' + id).classList.add('d-none');
+            document.getElementById('type-select-' + id).classList.remove('d-none');
+
+            document.getElementById('actions-view-' + id).style.display = 'none';
+            document.getElementById('actions-edit-' + id).style.display = 'block';
+
+            document.getElementById('year-input-' + id).focus();
+        }
+
+        // ── Inline Edit — cancel ──────────────────────────────────────
+        function cancelEdit(id) {
+            const row = document.getElementById('row-' + id);
+
+            row.classList.remove('table-warning');
+
+            document.getElementById('year-display-' + id).classList.remove('d-none');
+            document.getElementById('year-input-' + id).classList.add('d-none');
+
+            document.getElementById('rate-display-' + id).classList.remove('d-none');
+            document.getElementById('rate-input-' + id).classList.add('d-none');
+
+            document.getElementById('type-display-' + id).classList.remove('d-none');
+            document.getElementById('type-select-' + id).classList.add('d-none');
+
+            document.getElementById('actions-view-' + id).style.display = 'block';
+            document.getElementById('actions-edit-' + id).style.display = 'none';
+        }
+
+        // ── Inline Edit — save ────────────────────────────────────────
+        async function saveRow(id) {
+            const year   = document.getElementById('year-input-' + id)?.value ?? '';
+            const rate   = document.getElementById('rate-input-' + id)?.value ?? '';
+            const typeId = document.getElementById('type-select-' + id)?.value ?? '';
+            const row    = document.getElementById('row-' + id);
+            const active = row.dataset.active === 'true';
+            const btn    = document.getElementById('save-btn-' + id);
+
+            if (!year) { showToast('Year is required.', 'warning'); return; }
+            if (!rate) { showToast('Rate is required.', 'warning'); return; }
+            if (!typeId) { showToast('Please select a type.', 'warning'); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            try {
+                const res = await fetch('@Url.Action("InlineEdit", "Allowance")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({
+                        ObjectID: id,
+                        Year: year,
+                        Rate: rate,
+                        AllowanceSubTypeObjectID: typeId,
+                        Active: active,
+                        __RequestVerificationToken: token
+                    })
+                });
+
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/json'))
+                    throw new Error('Unexpected server response.');
+
+                const data = await res.json();
+
+                if (data.success) {
+                    document.getElementById('year-display-' + id).textContent = year;
+                    document.getElementById('year-input-' + id).classList.add('d-none');
+                    document.getElementById('year-display-' + id).classList.remove('d-none');
+
+                    document.getElementById('rate-display-' + id).textContent = parseFloat(rate).toFixed(4);
+                    document.getElementById('rate-input-' + id).classList.add('d-none');
+                    document.getElementById('rate-display-' + id).classList.remove('d-none');
+
+                    const typeName = subTypes.find(t => t.id == typeId)?.name ?? '';
+                    document.getElementById('type-display-' + id).innerHTML = typeBadge(typeName);
+                    document.getElementById('type-display-' + id).classList.remove('d-none');
+                    document.getElementById('type-select-' + id).classList.add('d-none');
+
+                    row.dataset.subtypeid = typeId;
+                    row.classList.replace('table-warning', 'table-success');
+                    setTimeout(() => row.classList.remove('table-success'), 1500);
+
+                    document.getElementById('actions-view-' + id).style.display = 'block';
+                    document.getElementById('actions-edit-' + id).style.display = 'none';
+                    showToast('Allowance updated.', 'success');
+                } else {
+                    showToast(data.message || 'Save failed.', 'danger');
+                }
+            } catch (err) {
+                showToast(err.message || 'Network error.', 'danger');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
+        }
+
+        function typeBadge(name) {
+            const css = name === 'INTERNAL'
+                ? 'bg-info-subtle text-info border-info-subtle'
+                : 'bg-warning-subtle text-warning border-warning-subtle';
+            return `<span class="badge ${css} border">${name}</span>`;
+        }
+    </script>
+}
