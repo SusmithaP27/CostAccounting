@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CostAccounting.Models;
 
 namespace CostAccounting.Models
 {
@@ -16,25 +17,15 @@ namespace CostAccounting.Models
         public decimal? BaseRate { get; set; }
 
         public bool IsCurrent => !EndDate.HasValue || EndDate.Value >= DateTime.Today;
-        public List<EmployeeDropdownVM> Employees { get; set; }
-            = new List<EmployeeDropdownVM>();
-    }
-
-    public class EmployeeDropdownVM
-    {
-        public int ObjectID { get; set; }
-        public string Name { get; set; }
     }
 
     public class EmployeeRateIndexVM
     {
         public List<EmployeeRateVM> EmployeeRates { get; set; } = new List<EmployeeRateVM>();
-        public List<EmployeeDropdownVM> Employees { get; set; }
-        = new List<EmployeeDropdownVM>();
 
         public string SearchTerm { get; set; }
         public int? EmployeeObjectId { get; set; } // filter to one employee's rate history
-        public bool ShowAll { get; set; } // include end-dated rows
+        public bool ShowAll { get; set; } // include end-dated rate rows
         public bool ShowInactiveEmployees { get; set; } // include rates belonging to inactive employees
         public DateTime? DateRangeStart { get; set; }
         public DateTime? DateRangeEnd { get; set; }
@@ -46,6 +37,9 @@ namespace CostAccounting.Models
         public int PageSize { get; set; } = 25;
         public int TotalCount { get; set; }
         public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+
+        // Populated only on the initial Index page load, for the Add Rate modal's dropdown.
+        public List<EmployeeOptionVM> EmployeeOptions { get; set; } = new List<EmployeeOptionVM>();
     }
 
     // Payload for the bulk end-date action, matching the Equipment/MaterialRate pattern

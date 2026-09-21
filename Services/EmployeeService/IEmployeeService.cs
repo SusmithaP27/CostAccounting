@@ -15,6 +15,7 @@ namespace CostAccounting.Services.EmployeeService
         Task<(bool Success, string Message)> CreateAsync(EmployeeVM vm, string enteredByUser);
         Task<(bool Success, string Message)> UpdateAsync(EmployeeVM vm, string enteredByUser);
         Task<(bool Success, string Message)> SoftDeleteAsync(int objectId);
+        Task<List<EmployeeOptionVM>> GetActiveEmployeeOptionsAsync();
     
     }
 }

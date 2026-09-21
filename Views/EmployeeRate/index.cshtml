@@ -1,1460 +1,325 @@
 @model CostAccounting.Models.EmployeeRateIndexVM
-
 @{
     ViewData["Title"] = "Employee Rates";
 }
 
-<div class="card">
+<style>
+    /* Keeps the filter row from overflowing on smaller screens */
+    #employeeRateFilters .form-control,
+    #employeeRateFilters .form-select {
+        max-width: 100%;
+    }
+</style>
 
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Employee Rates</h5>
-
-        <button type="button"
-                class="btn btn-sm btn-primary"
-                id="btnAddRate">
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Employee Rates</h3>
+    <div>
+        <button type="button" class="btn btn-outline-secondary" id="bulkEndDateBtn" disabled>
+            <i class="bi bi-calendar-x"></i> Bulk End-Date
+        </button>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeRateModal">
             <i class="bi bi-plus-lg"></i> Add Rate
         </button>
     </div>
-
-
-    <!-- FILTERS -->
-    <div class="card-body border-bottom py-3">
-
-        <div class="row g-2 align-items-end">
-
-            <div class="col-lg-4 col-md-6">
-                <label class="form-label mb-1">Search</label>
-
-                <input type="text"
-                       id="searchTerm"
-                       class="form-control form-control-sm"
-                       placeholder="Employee name or code..."
-                       value="@Model.SearchTerm" />
-            </div>
-
-
-            <div class="col-auto">
-                <label class="form-label mb-1">Start Date From</label>
-
-                <input type="date"
-                       id="dateRangeStart"
-                       class="form-control form-control-sm"
-                       value="@(Model.DateRangeStart?.ToString("yyyy-MM-dd"))" />
-            </div>
-
-
-            <div class="col-auto">
-                <label class="form-label mb-1">Start Date To</label>
-
-                <input type="date"
-                       id="dateRangeEnd"
-                       class="form-control form-control-sm"
-                       value="@(Model.DateRangeEnd?.ToString("yyyy-MM-dd"))" />
-            </div>
-
-
-            <div class="col-auto">
-                <div class="form-check mb-1">
-
-                    <input type="checkbox"
-                           class="form-check-input"
-                           id="showAll"
-                           @(Model.ShowAll ? "checked" : "") />
-
-                    <label class="form-check-label"
-                           for="showAll">
-                        Show all rates
-                    </label>
-
-                </div>
-            </div>
-
-
-            <div class="col-auto">
-                <div class="form-check mb-1">
-
-                    <input type="checkbox"
-                           class="form-check-input"
-                           id="showInactiveEmployees"
-                           @(Model.ShowInactiveEmployees ? "checked" : "") />
-
-                    <label class="form-check-label"
-                           for="showInactiveEmployees">
-                        Show inactive
-                    </label>
-
-                </div>
-            </div>
-
-        </div>
-
-    </div>
-
-
-    <!-- BULK BUTTONS -->
-    <div class="card-body py-2 border-bottom">
-
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary"
-                id="selectAllBtn">
-            Select All
-        </button>
-
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary"
-                id="unselectAllBtn">
-            Unselect All
-        </button>
-
-        <button type="button"
-                class="btn btn-sm btn-outline-primary"
-                id="bulkEndDateBtn"
-                disabled>
-            <i class="bi bi-calendar-x"></i>
-            Bulk End Date
-        </button>
-
-    </div>
-
-
-    <!-- TABLE -->
-    <div id="employeeRateTableContainer">
-
-        @await Html.PartialAsync(
-            "_EmployeeRateTable",
-            Model
-        )
-
-    </div>
-
 </div>
 
+<div class="card mb-3">
+    <div class="card-body" id="employeeRateFilters">
+        <div class="row g-2">
+            <div class="col-12 col-lg-4">
+                <label class="form-label">Search</label>
+                <div class="position-relative">
+                    <input type="text" id="searchTerm" class="form-control" placeholder="Employee name or code..." value="@Model.SearchTerm" />
+                    <button type="button" id="clearSearch" class="btn-close position-absolute top-50 end-0 translate-middle-y me-2 d-none" aria-label="Clear"></button>
+                </div>
+            </div>
+            <div class="col-6 col-lg-2">
+                <label class="form-label">Start Date From</label>
+                <input type="date" id="dateRangeStart" class="form-control" value="@(Model.DateRangeStart?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-6 col-lg-2">
+                <label class="form-label">Start Date To</label>
+                <input type="date" id="dateRangeEnd" class="form-control" value="@(Model.DateRangeEnd?.ToString("yyyy-MM-dd"))" />
+            </div>
+            <div class="col-12 col-lg-4 d-flex align-items-end flex-wrap gap-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="showAll" @(Model.ShowAll ? "checked" : "") />
+                    <label class="form-check-label" for="showAll">Show all rates (not just current)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="showInactiveEmployees" @(Model.ShowInactiveEmployees ? "checked" : "") />
+                    <label class="form-check-label" for="showInactiveEmployees">Include inactive employees</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-<!-- =========================================================
-     ANTI FORGERY TOKEN
-     ========================================================= -->
+<input type="hidden" id="employeeObjectIdFilter" value="@Model.EmployeeObjectId" />
 
-<form id="antiForgeryForm">
-    @Html.AntiForgeryToken()
-</form>
+<div id="employeeRateTableContainer">
+    <partial name="_EmployeeRateTable" model="Model" />
+</div>
 
-
-<!-- =========================================================
-     ADD RATE MODAL
-     ========================================================= -->
-
-<div class="modal fade"
-     id="addRateModal"
-     tabindex="-1"
-     aria-hidden="true">
-
-    <div class="modal-dialog modal-dialog-centered">
-
+<!-- Add Rate Modal -->
+<div class="modal fade" id="addEmployeeRateModal" tabindex="-1">
+    <div class="modal-dialog">
         <div class="modal-content">
-
-            <div class="modal-header">
-
-                <h5 class="modal-title">
-                    Add Employee Rate
-                </h5>
-
-                <button type="button"
-                        class="btn-close"
-                        data-bs-dismiss="modal">
-                </button>
-
-            </div>
-
-
-            <form id="addRateForm">
-
+            <form id="addEmployeeRateForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Employee Rate</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
                 <div class="modal-body">
-
-                    <div id="addRateMessage"></div>
-
-
-                    <div class="mb-3">
-    <label class="form-label">
-        Employee
-    </label>
-
-    <select name="EmployeeObjectId"
-            id="addEmployeeObjectId"
-            class="form-select"
-            required>
-
-        <option value="">
-            -- Select Employee --
-        </option>
-
-        @foreach (var employee in Model.EmployeeRates
-            .SelectMany(x => x.Employees ?? new List<EmployeeDropdownVM>())
-            .GroupBy(x => x.ObjectID)
-            .Select(x => x.First())
-            .OrderBy(x => x.Name))
-        {
-            <option value="@employee.ObjectID">
-                @employee.Name
-            </option>
-        }
-
-    </select>
-</div>
-
-
-                    <div class="row">
-
-                        <div class="col-md-6 mb-3">
-
-                            <label class="form-label">
-                                Start Date
-                            </label>
-
-                            <input type="date"
-                                   name="StartDate"
-                                   id="addStartDate"
-                                   class="form-control"
-                                   required />
-
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Employee</label>
+                            <select name="EmployeeObjectId" class="form-select" required>
+                                <option value="">-- Select Employee --</option>
+                                @foreach (var opt in Model.EmployeeOptions)
+                                {
+                                    <option value="@opt.ObjectID"
+                                            selected="@(Model.EmployeeObjectId == opt.ObjectID ? "selected" : null)">
+                                        @opt.DisplayName
+                                    </option>
+                                }
+                            </select>
                         </div>
-
-
-                        <div class="col-md-6 mb-3">
-
-                            <label class="form-label">
-                                End Date
-                            </label>
-
-                            <input type="date"
-                                   name="EndDate"
-                                   id="addEndDate"
-                                   class="form-control" />
-
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="StartDate" class="form-control" required />
                         </div>
-
+                        <div class="col-md-6">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="EndDate" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Rate</label>
+                            <input type="number" step="0.01" name="Rate" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Base Rate</label>
+                            <input type="number" step="0.01" name="BaseRate" class="form-control" />
+                        </div>
                     </div>
-
-
-                    <div class="row">
-
-                        <div class="col-md-6 mb-3">
-
-                            <label class="form-label">
-                                Rate
-                            </label>
-
-                            <input type="number"
-                                   step="0.01"
-                                   name="Rate"
-                                   id="addRate"
-                                   class="form-control"
-                                   required />
-
-                        </div>
-
-
-                        <div class="col-md-6 mb-3">
-
-                            <label class="form-label">
-                                Base Rate
-                            </label>
-
-                            <input type="number"
-                                   step="0.01"
-                                   name="BaseRate"
-                                   id="addBaseRate"
-                                   class="form-control" />
-
-                        </div>
-
-                    </div>
-
                 </div>
-
-
                 <div class="modal-footer">
-
-                    <button type="button"
-                            class="btn btn-secondary"
-                            data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-
-                    <button type="submit"
-                            class="btn btn-primary"
-                            id="saveAddRateBtn">
-                        Save
-                    </button>
-
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Rate</button>
                 </div>
-
             </form>
-
         </div>
-
     </div>
-
 </div>
 
+<!-- Bulk End-Date Modal -->
+<div class="modal fade" id="bulkEndDateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk End-Date</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><span id="bulkEndDateCount"></span> rate(s) selected.</p>
+                <label class="form-label">End Date</label>
+                <input type="date" id="bulkEndDateValue" class="form-control" required />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmBulkEndDateBtn" class="btn btn-primary">Apply</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteEmployeeRateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">Delete this rate record? This can be reversed by a system administrator only.</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmDeleteEmployeeRateBtn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="employeeRateToast" class="toast align-items-center text-white border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="employeeRateToastBody"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
 <script>
-
 (function () {
+    let deleteTargetId = null;
 
-    const container =
-        document.getElementById(
-            "employeeRateTableContainer"
-        );
+    function showToast(message, isSuccess) {
+        const toastEl = document.getElementById('employeeRateToast');
+        const bodyEl = document.getElementById('employeeRateToastBody');
+        toastEl.classList.remove('bg-success', 'bg-danger');
+        toastEl.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+        bodyEl.textContent = message;
+        new bootstrap.Toast(toastEl).show();
+    }
+    window.showEmployeeRateToast = showToast;
+
+    // The Update/Delete/BulkEndDate actions are [ValidateAntiForgeryToken], but their POSTs
+    // are built by hand (not via FormData on the Add Rate <form>), so the token has to be
+    // pulled from the hidden field the Add Rate form renders and attached explicitly —
+    // otherwise every one of those calls 400s.
+    window.getEmployeeRateAntiForgeryToken = function () {
+        const tokenInput = document.querySelector('#addEmployeeRateForm input[name="__RequestVerificationToken"]');
+        return tokenInput ? tokenInput.value : '';
+    };
 
 
-    let currentPage = @Model.Page;
-
-    const pageSize = @Model.PageSize;
-
-
-    window.employeeRateSortField =
-        '@(Model.SortField ?? "StartDate")';
-
-    window.employeeRateSortDirection =
-        '@(Model.SortDirection ?? "desc")';
-
-
-    /* =========================================================
-       TOKEN
-       ========================================================= */
-
-    function getToken() {
-
-        return document.querySelector(
-            '#antiForgeryForm input[name="__RequestVerificationToken"]'
-        ).value;
-
+    function buildParams(page) {
+        const params = new URLSearchParams();
+        params.set('SearchTerm', document.getElementById('searchTerm').value || '');
+        params.set('ShowAll', document.getElementById('showAll').checked);
+        params.set('ShowInactiveEmployees', document.getElementById('showInactiveEmployees').checked);
+        const empId = document.getElementById('employeeObjectIdFilter').value;
+        if (empId) params.set('EmployeeObjectId', empId);
+        const start = document.getElementById('dateRangeStart').value;
+        if (start) params.set('DateRangeStart', start);
+        const end = document.getElementById('dateRangeEnd').value;
+        if (end) params.set('DateRangeEnd', end);
+        params.set('SortField', window.employeeRateSortField || 'EmployeeName');
+        params.set('SortDirection', window.employeeRateSortDir || 'asc');
+        params.set('Page', page || 1);
+        return params;
     }
 
-
-    /* =========================================================
-       LOAD TABLE
-       ========================================================= */
-
-    window.refreshEmployeeRateTable =
-        async function (page) {
-
-            currentPage =
-                Number(page) || 1;
-
-
-            const params =
-                new URLSearchParams();
-
-
-            params.set(
-                "Page",
-                currentPage
-            );
-
-            params.set(
-                "PageSize",
-                pageSize
-            );
-
-            params.set(
-                "SearchTerm",
-                document.getElementById(
-                    "searchTerm"
-                ).value
-            );
-
-            params.set(
-                "ShowAll",
-                document.getElementById(
-                    "showAll"
-                ).checked
-            );
-
-            params.set(
-                "ShowInactiveEmployees",
-                document.getElementById(
-                    "showInactiveEmployees"
-                ).checked
-            );
-
-            params.set(
-                "SortField",
-                window.employeeRateSortField
-            );
-
-            params.set(
-                "SortDirection",
-                window.employeeRateSortDirection
-            );
-
-
-            const startDate =
-                document.getElementById(
-                    "dateRangeStart"
-                ).value;
-
-            if (startDate) {
-
-                params.set(
-                    "DateRangeStart",
-                    startDate
-                );
-
-            }
-
-
-            const endDate =
-                document.getElementById(
-                    "dateRangeEnd"
-                ).value;
-
-            if (endDate) {
-
-                params.set(
-                    "DateRangeEnd",
-                    endDate
-                );
-
-            }
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        '@Url.Action("GetTable", "EmployeeRate")?' +
-                        params.toString()
-                    );
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        "Unable to load employee rates."
-                    );
-
-                }
-
-
-                const html =
-                    await response.text();
-
-
-                container.innerHTML =
-                    html;
-
-
-                updateBulkButton();
-
-            }
-            catch (error) {
-
-                alert(error.message);
-
-            }
-
-        };
-
-    /* =========================================================
-   BULK END DATE
-   ========================================================= */
-
-document.getElementById(
-    "bulkEndDateBtn"
-).addEventListener(
-    "click",
-    async function () {
-
-        const selected =
-            Array.from(
-                container.querySelectorAll(
-                    ".rate-row-check:checked"
-                )
-            ).map(function (checkbox) {
-
-                return checkbox.dataset.id;
-
+    window.refreshEmployeeRateTable = function (page) {
+        const params = buildParams(page);
+        fetch('/EmployeeRate/GetTable?' + params.toString())
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('employeeRateTableContainer').innerHTML = html;
+                updateBulkButtonState();
             });
-
-
-        if (selected.length === 0) {
-
-            alert(
-                "Please select at least one employee rate."
-            );
-
-            return;
-
-        }
-
-
-        const endDate =
-            prompt(
-                "Enter the end date (MM/DD/YYYY):"
-            );
-
-
-        if (!endDate) {
-
-            return;
-
-        }
-
-
-        /*
-         * Convert MM/DD/YYYY to yyyy-MM-dd
-         */
-
-        const parts =
-            endDate.trim().split("/");
-
-
-        if (parts.length !== 3) {
-
-            alert(
-                "Please enter the date in MM/DD/YYYY format."
-            );
-
-            return;
-
-        }
-
-
-        const month =
-            parts[0].padStart(2, "0");
-
-        const day =
-            parts[1].padStart(2, "0");
-
-        const year =
-            parts[2];
-
-
-        if (
-            year.length !== 4 ||
-            isNaN(Number(month)) ||
-            isNaN(Number(day))
-        ) {
-
-            alert(
-                "Please enter a valid date."
-            );
-
-            return;
-
-        }
-
-
-        const formattedDate =
-            `${year}-${month}-${day}`;
-
-
-        /*
-         * Confirm
-         */
-
-        const confirmed =
-            confirm(
-                `Set end date ${endDate} for ${selected.length} selected rate(s)?`
-            );
-
-
-        if (!confirmed) {
-
-            return;
-
-        }
-
-
-        /*
-         * Build form data
-         *
-         * IMPORTANT:
-         * ObjectIDs is sent multiple times.
-         * ASP.NET Core binds this to List<int>.
-         */
-
-        const formData =
-            new URLSearchParams();
-
-
-        selected.forEach(function (id) {
-
-            formData.append(
-                "ObjectIDs",
-                id
-            );
-
-        });
-
-
-        formData.append(
-            "EndDate",
-            formattedDate
-        );
-
-
-        formData.append(
-            "__RequestVerificationToken",
-            getToken()
-        );
-
-
-        const button =
-            document.getElementById(
-                "bulkEndDateBtn"
-            );
-
-
-        button.disabled = true;
-
-
-        try {
-
-            const response =
-                await fetch(
-                    '@Url.Action("BulkEndDate", "EmployeeRate")',
-                    {
-                        method: "POST",
-
-                        headers: {
-                            "Content-Type":
-                                "application/x-www-form-urlencoded; charset=UTF-8"
-                        },
-
-                        body:
-                            formData.toString()
-                    }
-                );
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    `Server returned ${response.status}`
-                );
-
-            }
-
-
-            const result =
-                await response.json();
-
-
-            if (result.success) {
-
-                alert(
-                    result.message
-                );
-
-
-                /*
-                 * Reload current page
-                 */
-
-                refreshEmployeeRateTable(
-                    currentPage
-                );
-
-            }
-            else {
-
-                alert(
-                    result.message
-                );
-
-            }
-
-        }
-        catch (error) {
-
-            console.error(
-                "Bulk End Date Error:",
-                error
-            );
-
-
-            alert(
-                "Bulk End Date failed: " +
-                error.message
-            );
-
-        }
-        finally {
-
-            updateBulkButton();
-
-        }
-
-    }
-);
-
-
-    /* =========================================================
-       SEARCH
-       ========================================================= */
-
-    let searchTimer;
-
-    document.getElementById(
-        "searchTerm"
-    ).addEventListener(
-        "input",
-        function () {
-
-            clearTimeout(searchTimer);
-
-            searchTimer =
-                setTimeout(
-                    function () {
-
-                        refreshEmployeeRateTable(1);
-
-                    },
-                    400
-                );
-
-        }
-    );
-
-
-    /* =========================================================
-       FILTERS
-       ========================================================= */
-
-    document.getElementById(
-        "showAll"
-    ).addEventListener(
-        "change",
-        function () {
-
-            refreshEmployeeRateTable(1);
-
-        }
-    );
-
-
-    document.getElementById(
-        "showInactiveEmployees"
-    ).addEventListener(
-        "change",
-        function () {
-
-            refreshEmployeeRateTable(1);
-
-        }
-    );
-
-
-    document.getElementById(
-        "dateRangeStart"
-    ).addEventListener(
-        "change",
-        function () {
-
-            refreshEmployeeRateTable(1);
-
-        }
-    );
-
-
-    document.getElementById(
-        "dateRangeEnd"
-    ).addEventListener(
-        "change",
-        function () {
-
-            refreshEmployeeRateTable(1);
-
-        }
-    );
-
-
-    /* =========================================================
-       TABLE CLICK EVENTS
-       ========================================================= */
-
-    container.addEventListener(
-        "click",
-        async function (e) {
-
-
-            /* -----------------------------------------
-               SORT
-               ----------------------------------------- */
-
-            const sortHeader =
-                e.target.closest(".sortable");
-
-            if (sortHeader) {
-
-                window.employeeRateSortField =
-                    sortHeader.dataset.field;
-
-                window.employeeRateSortDirection =
-                    sortHeader.dataset.direction;
-
+    };
+
+    document.getElementById('searchTerm').addEventListener('input', function () {
+        document.getElementById('clearSearch').classList.toggle('d-none', this.value.length === 0);
+        refreshEmployeeRateTable(1);
+    });
+    document.getElementById('clearSearch').addEventListener('click', function () {
+        document.getElementById('searchTerm').value = '';
+        this.classList.add('d-none');
+        refreshEmployeeRateTable(1);
+    });
+
+    // Every filter control resets to page 1 on change — this is what stops the grid from
+    // landing on an out-of-range page after a filter shrinks the result set (e.g. unchecking
+    // "include inactive employees" and appearing to show nothing because it was still on page 6).
+    ['showAll', 'showInactiveEmployees', 'dateRangeStart', 'dateRangeEnd'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => refreshEmployeeRateTable(1));
+    });
+
+    document.getElementById('addEmployeeRateForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+        for (const [key, value] of formData.entries()) params.append(key, value);
+
+        fetch('/EmployeeRate/Create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success);
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addEmployeeRateModal')).hide();
+                this.reset();
                 refreshEmployeeRateTable(1);
-
-                return;
-
             }
-
-
-            /* -----------------------------------------
-               PAGINATION
-               ----------------------------------------- */
-
-            const pageLink =
-                e.target.closest(
-                    ".employee-rate-page-link"
-                );
-
-            if (pageLink) {
-
-                e.preventDefault();
-
-                if (
-                    pageLink.closest(
-                        ".disabled"
-                    )
-                ) {
-                    return;
-                }
-
-                refreshEmployeeRateTable(
-                    pageLink.dataset.page
-                );
-
-                return;
-
-            }
-
-
-            /* -----------------------------------------
-               SELECT ALL
-               ----------------------------------------- */
-
-            if (
-                e.target.id ===
-                "selectAllRates"
-            ) {
-
-                container
-                    .querySelectorAll(
-                        ".rate-row-check"
-                    )
-                    .forEach(
-                        function (checkbox) {
-
-                            checkbox.checked =
-                                e.target.checked;
-
-                        }
-                    );
-
-                updateBulkButton();
-
-                return;
-
-            }
-
-
-            /* -----------------------------------------
-               ROW CHECKBOX
-               ----------------------------------------- */
-
-            if (
-                e.target.classList.contains(
-                    "rate-row-check"
-                )
-            ) {
-
-                updateBulkButton();
-
-                return;
-
-            }
-
-
-            /* -----------------------------------------
-               EDIT
-               ----------------------------------------- */
-
-            const editButton =
-                e.target.closest(
-                    ".btn-edit-row"
-                );
-
-            if (editButton) {
-
-                const row =
-                    editButton.closest("tr");
-
-
-                row.querySelectorAll(
-                    ".cell-view"
-                ).forEach(
-                    function (element) {
-
-                        element.classList.add(
-                            "d-none"
-                        );
-
-                    }
-                );
-
-
-                row.querySelectorAll(
-                    ".cell-input"
-                ).forEach(
-                    function (element) {
-
-                        element.classList.remove(
-                            "d-none"
-                        );
-
-                    }
-                );
-
-
-                editButton.classList.add(
-                    "d-none"
-                );
-
-
-                row.querySelector(
-                    ".btn-save-row"
-                ).classList.remove(
-                    "d-none"
-                );
-
-
-                row.querySelector(
-                    ".btn-cancel-row"
-                ).classList.remove(
-                    "d-none"
-                );
-
-
-                return;
-
-            }
-
-
-            /* -----------------------------------------
-               CANCEL
-               ----------------------------------------- */
-
-            const cancelButton =
-                e.target.closest(
-                    ".btn-cancel-row"
-                );
-
-            if (cancelButton) {
-
-                refreshEmployeeRateTable(
-                    currentPage
-                );
-
-                return;
-
-            }
-
-
-            /* -----------------------------------------
-               SAVE
-               ----------------------------------------- */
-
-            const saveButton =
-                e.target.closest(
-                    ".btn-save-row"
-                );
-
-            if (saveButton) {
-
-                const row =
-                    saveButton.closest("tr");
-
-
-                const params =
-                    new URLSearchParams();
-
-
-                params.set(
-                    "ObjectID",
-                    row.dataset.id
-                );
-
-
-                row.querySelectorAll(
-                    ".cell-input, .cell-input-always"
-                ).forEach(
-                    function (input) {
-
-                        params.set(
-                            input.dataset.field,
-                            input.value
-                        );
-
-                    }
-                );
-
-
-                params.set(
-                    "__RequestVerificationToken",
-                    getToken()
-                );
-
-
-                saveButton.disabled =
-                    true;
-
-
-                try {
-
-                    const response =
-                        await fetch(
-                            '@Url.Action("Update", "EmployeeRate")',
-                            {
-                                method: "POST",
-
-                                headers: {
-                                    "Content-Type":
-                                        "application/x-www-form-urlencoded"
-                                },
-
-                                body:
-                                    params.toString()
-                            }
-                        );
-
-
-                    const result =
-                        await response.json();
-
-
-                    if (result.success) {
-
-                        refreshEmployeeRateTable(
-                            currentPage
-                        );
-
-                    }
-                    else {
-
-                        alert(
-                            result.message
-                        );
-
-                        saveButton.disabled =
-                            false;
-
-                    }
-
-                }
-                catch (error) {
-
-                    alert(
-                        "Update failed: " +
-                        error.message
-                    );
-
-                    saveButton.disabled =
-                        false;
-
-                }
-
-                return;
-
-            }
-
-
-            /* -----------------------------------------
-               DELETE
-               ----------------------------------------- */
-
-            const deleteButton =
-                e.target.closest(
-                    ".btn-delete-rate"
-                );
-
-            if (deleteButton) {
-
-                const id =
-                    deleteButton.dataset.id;
-
-
-                if (
-                    !confirm(
-                        "Are you sure you want to delete this employee rate?"
-                    )
-                ) {
-                    return;
-                }
-
-
-                const params =
-                    new URLSearchParams();
-
-
-                params.set(
-                    "id",
-                    id
-                );
-
-
-                params.set(
-                    "__RequestVerificationToken",
-                    getToken()
-                );
-
-
-                deleteButton.disabled =
-                    true;
-
-
-                try {
-
-                    const response =
-                        await fetch(
-                            '@Url.Action("Delete", "EmployeeRate")',
-                            {
-                                method: "POST",
-
-                                headers: {
-                                    "Content-Type":
-                                        "application/x-www-form-urlencoded"
-                                },
-
-                                body:
-                                    params.toString()
-                            }
-                        );
-
-
-                    const result =
-                        await response.json();
-
-
-                    if (result.success) {
-
-                        refreshEmployeeRateTable(
-                            currentPage
-                        );
-
-                    }
-                    else {
-
-                        alert(
-                            result.message
-                        );
-
-                        deleteButton.disabled =
-                            false;
-
-                    }
-
-                }
-                catch (error) {
-
-                    alert(
-                        "Delete failed: " +
-                        error.message
-                    );
-
-                    deleteButton.disabled =
-                        false;
-
-                }
-
-                return;
-
-            }
-
-        }
-    );
-
-
-    /* =========================================================
-       BULK CHECK
-       ========================================================= */
-
-    function updateBulkButton() {
-
-        const count =
-            container.querySelectorAll(
-                ".rate-row-check:checked"
-            ).length;
-
-
-        document.getElementById(
-            "bulkEndDateBtn"
-        ).disabled =
-            count === 0;
-
+        });
+    });
+
+    function updateBulkButtonState() {
+        const checked = document.querySelectorAll('.rate-row-check:checked');
+        const btn = document.getElementById('bulkEndDateBtn');
+        btn.disabled = checked.length === 0;
+        btn.textContent = checked.length > 0 ? `Bulk End-Date (${checked.length})` : 'Bulk End-Date';
     }
 
-
-    document.getElementById(
-        "selectAllBtn"
-    ).addEventListener(
-        "click",
-        function () {
-
-            container
-                .querySelectorAll(
-                    ".rate-row-check"
-                )
-                .forEach(
-                    function (checkbox) {
-
-                        checkbox.checked =
-                            true;
-
-                    }
-                );
-
-
-            const selectAll =
-                document.getElementById(
-                    "selectAllRates"
-                );
-
-            if (selectAll) {
-
-                selectAll.checked =
-                    true;
-
+    document.getElementById('employeeRateTableContainer').addEventListener('change', function (e) {
+        if (e.target.classList.contains('rate-row-check') || e.target.id === 'selectAllRates') {
+            if (e.target.id === 'selectAllRates') {
+                document.querySelectorAll('.rate-row-check').forEach(cb => cb.checked = e.target.checked);
             }
-
-
-            updateBulkButton();
-
+            updateBulkButtonState();
         }
-    );
+    });
 
-
-    document.getElementById(
-        "unselectAllBtn"
-    ).addEventListener(
-        "click",
-        function () {
-
-            container
-                .querySelectorAll(
-                    ".rate-row-check"
-                )
-                .forEach(
-                    function (checkbox) {
-
-                        checkbox.checked =
-                            false;
-
-                    }
-                );
-
-
-            const selectAll =
-                document.getElementById(
-                    "selectAllRates"
-                );
-
-            if (selectAll) {
-
-                selectAll.checked =
-                    false;
-
-            }
-
-
-            updateBulkButton();
-
+    document.getElementById('employeeRateTableContainer').addEventListener('click', function (e) {
+        const delBtn = e.target.closest('.btn-delete-rate');
+        if (delBtn) {
+            deleteTargetId = delBtn.dataset.id;
+            new bootstrap.Modal(document.getElementById('deleteEmployeeRateModal')).show();
         }
-    );
+    });
 
+    document.getElementById('confirmDeleteEmployeeRateBtn').addEventListener('click', function () {
+        const params = new URLSearchParams();
+        params.set('id', deleteTargetId);
+        params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
+        fetch('/EmployeeRate/Delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success);
+            bootstrap.Modal.getInstance(document.getElementById('deleteEmployeeRateModal')).hide();
+            if (res.success) refreshEmployeeRateTable(1);
+        });
+    });
 
-    /* =========================================================
-       ADD RATE
-       ========================================================= */
+    document.getElementById('bulkEndDateBtn').addEventListener('click', function () {
+        const checked = document.querySelectorAll('.rate-row-check:checked');
+        document.getElementById('bulkEndDateCount').textContent = checked.length;
+        new bootstrap.Modal(document.getElementById('bulkEndDateModal')).show();
+    });
 
-    document.getElementById(
-        "btnAddRate"
-    ).addEventListener(
-        "click",
-        function () {
+    document.getElementById('confirmBulkEndDateBtn').addEventListener('click', function () {
+        const ids = Array.from(document.querySelectorAll('.rate-row-check:checked')).map(cb => cb.dataset.id);
+        const endDate = document.getElementById('bulkEndDateValue').value;
+        if (!endDate || ids.length === 0) return;
 
-            document.getElementById(
-                "addRateForm"
-            ).reset();
+        const params = new URLSearchParams();
+        ids.forEach(id => params.append('ObjectIDs', id));
+        params.set('EndDate', endDate);
+        params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
 
-
-            document.getElementById(
-                "addRateMessage"
-            ).innerHTML = "";
-
-
-            bootstrap.Modal
-                .getOrCreateInstance(
-                    document.getElementById(
-                        "addRateModal"
-                    )
-                )
-                .show();
-
-        }
-    );
-
-
-    /* =========================================================
-       CREATE
-       ========================================================= */
-
-    document.getElementById(
-        "addRateForm"
-    ).addEventListener(
-        "submit",
-        async function (e) {
-
-            e.preventDefault();
-
-
-            const form =
-                e.target;
-
-
-            const params =
-                new URLSearchParams();
-
-
-            params.set(
-                "EmployeeObjectId",
-                document.getElementById(
-                    "addEmployeeObjectId"
-                ).value
-            );
-
-
-            params.set(
-                "StartDate",
-                document.getElementById(
-                    "addStartDate"
-                ).value
-            );
-
-
-            params.set(
-                "EndDate",
-                document.getElementById(
-                    "addEndDate"
-                ).value
-            );
-
-
-            params.set(
-                "Rate",
-                document.getElementById(
-                    "addRate"
-                ).value
-            );
-
-
-            params.set(
-                "BaseRate",
-                document.getElementById(
-                    "addBaseRate"
-                ).value
-            );
-
-
-            params.set(
-                "__RequestVerificationToken",
-                getToken()
-            );
-
-
-            const saveButton =
-                document.getElementById(
-                    "saveAddRateBtn"
-                );
-
-
-            saveButton.disabled =
-                true;
-
-
-            try {
-
-                const response =
-                    await fetch(
-                        '@Url.Action("Create", "EmployeeRate")',
-                        {
-                            method: "POST",
-
-                            headers: {
-                                "Content-Type":
-                                    "application/x-www-form-urlencoded"
-                            },
-
-                            body:
-                                params.toString()
-                        }
-                    );
-
-
-                const result =
-                    await response.json();
-
-
-                if (result.success) {
-
-                    bootstrap.Modal
-                        .getInstance(
-                            document.getElementById(
-                                "addRateModal"
-                            )
-                        )
-                        .hide();
-
-
-                    refreshEmployeeRateTable(1);
-
-                }
-                else {
-
-                    document.getElementById(
-                        "addRateMessage"
-                    ).innerHTML = `
-                        <div class="alert alert-danger py-2">
-                            ${result.message}
-                        </div>
-                    `;
-
-                }
-
-            }
-            catch (error) {
-
-                document.getElementById(
-                    "addRateMessage"
-                ).innerHTML = `
-                    <div class="alert alert-danger py-2">
-                        ${error.message}
-                    </div>
-                `;
-
-            }
-            finally {
-
-                saveButton.disabled =
-                    false;
-
-            }
-
-        }
-    );
-
-
+        fetch('/EmployeeRate/BulkEndDate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success);
+            bootstrap.Modal.getInstance(document.getElementById('bulkEndDateModal')).hide();
+            if (res.success) refreshEmployeeRateTable(1);
+        });
+    });
 })();
 </script>
+}

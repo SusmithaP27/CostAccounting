@@ -339,3 +339,4 @@ C:\Applications Build\CostAccounting\obj\Debug\net10.0\CostAccounting.genruntime
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\ref\CostAccounting.dll
 C:\Applications Build\CostAccounting\bin\Debug\net10.0\Rotativa.AspNetCore.dll
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\CostAccounting.MvcApplicationPartsAssemblyInfo.cs
+C:\Applications Build\CostAccounting\obj\Debug\net10.0\CostAccounting.sourcelink.json

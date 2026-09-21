@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using CostAccounting.Models;
 using CostAccounting.Data;
@@ -14,193 +18,69 @@ namespace CostAccounting.Services.EmployeeRateService
             _context = context;
         }
 
-        // public async Task<EmployeeRateIndexVM> GetIndexAsync(EmployeeRateIndexVM filter)
-        // {
-        //     var query = _context.EmployeeRates
-        //         .Include(er => er.Employee)
-        //         .Where(er => !er.Deleted && !er.Employee.Deleted)
-        //         .AsQueryable();
-            
-        //     if (!filter.ShowInactiveEmployees)
-        //         query = query.Where(er => er.Employee.Active);
-
-        //     if (filter.EmployeeObjectId.HasValue)
-        //         query = query.Where(er => er.EmployeeObjectId == filter.EmployeeObjectId);
-
-        //     if (!filter.ShowAll)
-        //         query = query.Where(er => er.EndDate == null || er.EndDate >= DateTime.Today);
-
-        //     if (filter.DateRangeStart.HasValue)
-        //         query = query.Where(er => er.StartDate >= filter.DateRangeStart);
-
-        //     if (filter.DateRangeEnd.HasValue)
-        //         query = query.Where(er => er.StartDate <= filter.DateRangeEnd);
-
-        //     if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
-        //     {
-        //         var term = filter.SearchTerm.Trim();
-        //         query = query.Where(er =>
-        //             er.Employee.FirstName.Contains(term) ||
-        //             er.Employee.LastName.Contains(term) ||
-        //             er.Employee.Code.Contains(term));
-        //     }
-
-        //     filter.TotalCount = await query.CountAsync();
-
-        //     query = filter.SortField switch
-        //     {
-        //         "EmployeeName" => filter.SortDirection == "asc"
-        //             ? query.OrderBy(er => er.Employee.LastName)
-        //             : query.OrderByDescending(er => er.Employee.LastName),
-        //         "Rate" => filter.SortDirection == "asc" ? query.OrderBy(er => er.Rate) : query.OrderByDescending(er => er.Rate),
-        //         "EndDate" => filter.SortDirection == "asc" ? query.OrderBy(er => er.EndDate) : query.OrderByDescending(er => er.EndDate),
-        //         _ => filter.SortDirection == "asc" ? query.OrderBy(er => er.StartDate) : query.OrderByDescending(er => er.StartDate),
-        //     };
-
-        //     var page = await query
-        //         .Skip((filter.Page - 1) * filter.PageSize)
-        //         .Take(filter.PageSize)
-        //         .Select(er => new EmployeeRateVM
-        //         {
-        //             ObjectID = er.ObjectID,
-        //             EmployeeObjectId = er.EmployeeObjectId,
-        //             EmployeeName = er.Employee.LastName + ", " + er.Employee.FirstName,
-        //             EmployeeCode = er.Employee.Code,
-        //             StartDate = er.StartDate,
-        //             EndDate = er.EndDate,
-        //             Rate = er.Rate,
-        //             BaseRate = er.BaseRate
-        //         })
-        //         .ToListAsync();
-
-        //     filter.EmployeeRates = page;
-        //     return filter;
-        // }
-
         public async Task<EmployeeRateIndexVM> GetIndexAsync(EmployeeRateIndexVM filter)
-{
-    if (filter.Page < 1)
-        filter.Page = 1;
-
-    if (filter.PageSize <= 0)
-        filter.PageSize = 10;
-
-    var query = _context.EmployeeRates
-        .Include(er => er.Employee)
-        .Where(er => !er.Deleted && !er.Employee.Deleted)
-        .AsQueryable();
-
-    // Active employees by default
-    if (!filter.ShowInactiveEmployees)
-    {
-        query = query.Where(er => er.Employee.Active);
-    }
-
-    // Specific employee if selected
-    if (filter.EmployeeObjectId.HasValue)
-    {
-        query = query.Where(er =>
-            er.EmployeeObjectId == filter.EmployeeObjectId.Value);
-    }
-
-    // Current rates by default
-    if (!filter.ShowAll)
-    {
-        query = query.Where(er =>
-            er.EndDate == null ||
-            er.EndDate >= DateTime.Today);
-    }
-
-    // Date range
-    if (filter.DateRangeStart.HasValue)
-    {
-        query = query.Where(er =>
-            er.StartDate >= filter.DateRangeStart.Value);
-    }
-
-    if (filter.DateRangeEnd.HasValue)
-    {
-        query = query.Where(er =>
-            er.StartDate <= filter.DateRangeEnd.Value);
-    }
-
-    // Search
-    if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
-    {
-        var term = filter.SearchTerm.Trim();
-
-        query = query.Where(er =>
-            er.Employee.FirstName.Contains(term) ||
-            er.Employee.LastName.Contains(term) ||
-            er.Employee.Code.Contains(term));
-    }
-
-    filter.TotalCount = await query.CountAsync();
-
-    query = filter.SortField switch
-    {
-        "EmployeeName" =>
-            filter.SortDirection == "asc"
-                ? query.OrderBy(er => er.Employee.LastName)
-                : query.OrderByDescending(er => er.Employee.LastName),
-
-        "Rate" =>
-            filter.SortDirection == "asc"
-                ? query.OrderBy(er => er.Rate)
-                : query.OrderByDescending(er => er.Rate),
-
-        "EndDate" =>
-            filter.SortDirection == "asc"
-                ? query.OrderBy(er => er.EndDate)
-                : query.OrderByDescending(er => er.EndDate),
-
-        _ =>
-            filter.SortDirection == "asc"
-                ? query.OrderBy(er => er.StartDate)
-                : query.OrderByDescending(er => er.StartDate)
-    };
-
-    var page = await query
-        .Skip((filter.Page - 1) * filter.PageSize)
-        .Take(filter.PageSize)
-        .Select(er => new EmployeeRateVM
         {
-            ObjectID = er.ObjectID,
-            EmployeeObjectId = er.EmployeeObjectId,
+            var query = _context.EmployeeRates
+                .Include(er => er.Employee)
+                .Where(er => !er.Deleted && !er.Employee.Deleted)
+                .AsQueryable();
 
-            EmployeeName =
-                er.Employee.LastName + ", " +
-                er.Employee.FirstName,
+            if (!filter.ShowInactiveEmployees)
+                query = query.Where(er => er.Employee.Active);
 
-            EmployeeCode = er.Employee.Code,
+            if (filter.EmployeeObjectId.HasValue)
+                query = query.Where(er => er.EmployeeObjectId == filter.EmployeeObjectId);
 
-            StartDate = er.StartDate,
-            EndDate = er.EndDate,
-            Rate = er.Rate,
-            BaseRate = er.BaseRate
-        })
-        .ToListAsync();
+            if (!filter.ShowAll)
+                query = query.Where(er => er.EndDate == null || er.EndDate >= DateTime.Today);
 
-    filter.EmployeeRates = page;
+            if (filter.DateRangeStart.HasValue)
+                query = query.Where(er => er.StartDate >= filter.DateRangeStart);
 
-    return filter;
-}
-public async Task<List<EmployeeDropdownVM>> GetActiveEmployeesAsync()
-{
-    return await _context.Employees
-        .Where(e =>
-            e.Active &&
-            !e.Deleted)
-        .OrderBy(e => e.LastName)
-        .ThenBy(e => e.FirstName)
-        .Select(e => new EmployeeDropdownVM
-        {
-            ObjectID = e.ObjectID,
-            Name = e.LastName + ", " + e.FirstName +
-                   " (" + e.Code + ")"
-        })
-        .ToListAsync();
-}
+            if (filter.DateRangeEnd.HasValue)
+                query = query.Where(er => er.StartDate <= filter.DateRangeEnd);
+
+            if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+            {
+                var term = filter.SearchTerm.Trim();
+                query = query.Where(er =>
+                    er.Employee.FirstName.Contains(term) ||
+                    er.Employee.LastName.Contains(term) ||
+                    er.Employee.Code.Contains(term));
+            }
+
+            filter.TotalCount = await query.CountAsync();
+
+            query = filter.SortField switch
+            {
+                "EmployeeName" => filter.SortDirection == "asc"
+                    ? query.OrderBy(er => er.Employee.LastName)
+                    : query.OrderByDescending(er => er.Employee.LastName),
+                "Rate" => filter.SortDirection == "asc" ? query.OrderBy(er => er.Rate) : query.OrderByDescending(er => er.Rate),
+                "EndDate" => filter.SortDirection == "asc" ? query.OrderBy(er => er.EndDate) : query.OrderByDescending(er => er.EndDate),
+                _ => filter.SortDirection == "asc" ? query.OrderBy(er => er.StartDate) : query.OrderByDescending(er => er.StartDate),
+            };
+
+            var page = await query
+                .Skip((filter.Page - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .Select(er => new EmployeeRateVM
+                {
+                    ObjectID = er.ObjectID,
+                    EmployeeObjectId = er.EmployeeObjectId,
+                    EmployeeName = er.Employee.LastName + ", " + er.Employee.FirstName,
+                    EmployeeCode = er.Employee.Code,
+                    StartDate = er.StartDate,
+                    EndDate = er.EndDate,
+                    Rate = er.Rate,
+                    BaseRate = er.BaseRate
+                })
+                .ToListAsync();
+
+            filter.EmployeeRates = page;
+            return filter;
+        }
+
         public async Task<EmployeeRateVM> GetByIdAsync(int objectId)
         {
             var er = await _context.EmployeeRates

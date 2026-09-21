@@ -11,6 +11,5 @@ namespace CostAccounting.Services.EmployeeRateService
         Task<(bool Success, string Message)> UpdateAsync(EmployeeRateVM vm, string enteredByUser);
         Task<(bool Success, string Message)> SoftDeleteAsync(int objectId);
         Task<(bool Success, string Message)> BulkEndDateAsync(List<int> objectIds, System.DateTime endDate);
-        Task<List<EmployeeDropdownVM>> GetActiveEmployeesAsync();
     }
 }

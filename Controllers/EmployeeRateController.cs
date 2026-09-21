@@ -1,35 +1,37 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using CostAccounting.Services;
 using CostAccounting.Models;
 using CostAccounting.Services.EmployeeRateService;
+using CostAccounting.Services.EmployeeService;
 
 namespace CostAccounting.Controllers
 {
     public class EmployeeRateController : Controller
     {
         private readonly IEmployeeRateService _employeeRateService;
+        private readonly IEmployeeService _employeeService;
 
-        public EmployeeRateController(IEmployeeRateService employeeRateService)
+        public EmployeeRateController(IEmployeeRateService employeeRateService, IEmployeeService employeeService)
         {
             _employeeRateService = employeeRateService;
+            _employeeService = employeeService;
         }
 
         public async Task<IActionResult> Index(int? employeeObjectId)
         {
-            // var vm = await _employeeRateService.GetIndexAsync(new EmployeeRateIndexVM { EmployeeObjectId = employeeObjectId });
-            // return View(vm);
             var vm = await _employeeRateService.GetIndexAsync(new EmployeeRateIndexVM
             {
                 EmployeeObjectId = employeeObjectId,
-                // This is a standalone tab covering every employee's rate history, not just
-                // whoever's currently active — always show ended rates alongside current ones.
-                ShowInactiveEmployees = false,
-                SortField = "StartDate",
-                SortDirection = "desc",
-                Page = 1,
-                PageSize = 15
-            });    
-             vm.Employees =
-        await _employeeRateService.GetActiveEmployeesAsync();           
+                // Default view: each employee's current rate only. The "Show All Rates"
+                // checkbox on the page expands this to every rate, current and ended, for
+                // every employee.
+                ShowAll = false,
+                SortField = "EmployeeName",
+                SortDirection = "asc"
+            });
+
+            vm.EmployeeOptions = await _employeeService.GetActiveEmployeeOptionsAsync();
             return View(vm);
         }
 
@@ -48,74 +50,15 @@ namespace CostAccounting.Controllers
             return Json(vm);
         }
 
-        // [HttpPost]
-        // [ValidateAntiForgeryToken]
-        // public async Task<IActionResult> Create([FromForm] EmployeeRateVM vm)
-        // {
-        //     ModelState.Clear();
-        //     var (success, message) = await _employeeRateService.CreateAsync(vm, User.Identity.Name);
-        //     return Json(new { success, message });
-        // }
-
         [HttpPost]
-[ValidateAntiForgeryToken]
-public async Task<IActionResult> Create([FromForm] EmployeeRateVM vm)
-{
-    try
-    {
-        ModelState.Clear();
-
-        if (vm.EmployeeObjectId <= 0)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create([FromForm] EmployeeRateVM vm)
         {
-            return Json(new
-            {
-                success = false,
-                message = "Please select an employee."
-            });
+            ModelState.Clear();
+            var (success, message) = await _employeeRateService.CreateAsync(vm, User.Identity.Name);
+            return Json(new { success, message });
         }
 
-        if (vm.StartDate == default)
-        {
-            return Json(new
-            {
-                success = false,
-                message = "Please enter a start date."
-            });
-        }
-
-        if (vm.Rate < 0)
-        {
-            return Json(new
-            {
-                success = false,
-                message = "Rate cannot be negative."
-            });
-        }
-
-        var enteredByUser =
-            User?.Identity?.Name ?? "System";
-
-        var (success, message) =
-            await _employeeRateService.CreateAsync(
-                vm,
-                enteredByUser);
-
-        return Json(new
-        {
-            success,
-            message
-        });
-    }
-    catch (Exception ex)
-    {
-        return Json(new
-        {
-            success = false,
-            message = ex.InnerException?.Message
-                      ?? ex.Message
-        });
-    }
-}
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Update([FromForm] EmployeeRateVM vm)

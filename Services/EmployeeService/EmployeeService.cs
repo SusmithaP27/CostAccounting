@@ -16,6 +16,19 @@ namespace CostAccounting.Services.EmployeeService
             _context = context;
         }
 
+        public async Task<List<EmployeeOptionVM>> GetActiveEmployeeOptionsAsync()
+        {
+            return await _context.Employees
+                .Where(e => e.Active && !e.Deleted)
+                .OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
+                .Select(e => new EmployeeOptionVM
+                {
+                    ObjectID = e.ObjectID,
+                    DisplayName = e.LastName + ", " + e.FirstName + " (" + e.Code + ")"
+                })
+                .ToListAsync();
+        }
+
         public async Task<EmployeeIndexVM> GetIndexAsync(EmployeeIndexVM filter)
         {
             var query = _context.Employees
