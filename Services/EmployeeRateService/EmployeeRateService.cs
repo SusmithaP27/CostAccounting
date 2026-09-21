@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using CostAccounting.Models;
 using CostAccounting.Data;
@@ -167,6 +163,61 @@ namespace CostAccounting.Services.EmployeeRateService
 
             await _context.SaveChangesAsync();
             return (true, $"{objectIds.Count} employee rate(s) updated.");
+        }
+
+        // "Almost every employee" gets a flat +/-10% seasonal swing: end the current rate row
+        // the day before effectiveDate, start a new one at the adjusted amount. Increase and
+        // decrease are independent flat 10% moves (not a perfect round-trip — 1.10 * 0.90 =
+        // 0.99, not 1.00 — which matches "goes up 10% ... goes back down 10%" as written
+        // rather than assuming they must net out to the original number).
+        public async Task<(bool Success, string Message)> ApplySeasonalAdjustmentAsync(
+            bool isIncrease, DateTime effectiveDate, List<int> employeeObjectIds, string enteredByUser)
+        {
+            var multiplier = isIncrease ? 1.10m : 0.90m;
+
+            // Same anti-Contains() workaround as BulkEndDateAsync: fetch everything currently
+            // active/current in one shot, then filter to the target employee set in memory
+            // rather than pushing a Contains() list into the SQL translation.
+            var allCurrentRates = await _context.EmployeeRates
+                .Where(er => !er.Deleted && (er.EndDate == null || er.EndDate >= effectiveDate))
+                .Include(er => er.Employee)
+                .ToListAsync();
+
+            var targetSet = employeeObjectIds != null && employeeObjectIds.Any()
+                ? new HashSet<int>(employeeObjectIds)
+                : null; // null means "everyone active with a current rate"
+
+            var currentRatesByEmployee = allCurrentRates
+                .Where(er => !er.Employee.Deleted && er.Employee.Active)
+                .Where(er => targetSet == null || targetSet.Contains(er.EmployeeObjectId))
+                .GroupBy(er => er.EmployeeObjectId)
+                .Select(g => g.OrderByDescending(er => er.StartDate).First())
+                .ToList();
+
+            if (!currentRatesByEmployee.Any())
+                return (false, "No matching employees with a current rate were found.");
+
+            foreach (var oldRate in currentRatesByEmployee)
+            {
+                oldRate.EndDate = effectiveDate.AddDays(-1);
+
+                var newRate = new EmployeeRate
+                {
+                    EmployeeObjectId = oldRate.EmployeeObjectId,
+                    StartDate = effectiveDate,
+                    EndDate = null,
+                    Rate = Math.Round(oldRate.Rate * multiplier, 2),
+                    BaseRate = oldRate.BaseRate,
+                    EnteredByUser = enteredByUser,
+                    EnteredDate = DateTime.Now,
+                    Deleted = false
+                };
+                _context.EmployeeRates.Add(newRate);
+            }
+
+            await _context.SaveChangesAsync();
+            var direction = isIncrease ? "increased" : "decreased";
+            return (true, $"Rates {direction} 10% for {currentRatesByEmployee.Count} employee(s), effective {effectiveDate:MM/dd/yyyy}.");
         }
     }
 }

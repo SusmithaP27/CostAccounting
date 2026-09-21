@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using CostAccounting.Models;
 
 namespace CostAccounting.Models
 {
@@ -47,5 +46,14 @@ namespace CostAccounting.Models
     {
         public List<int> ObjectIDs { get; set; }
         public DateTime EndDate { get; set; }
+    }
+
+    // Payload for the seasonal +/-10% adjustment. EmployeeObjectIds empty/omitted means
+    // "apply to every active employee with a current rate."
+    public class SeasonalAdjustmentRequest
+    {
+        public bool IsIncrease { get; set; }
+        public DateTime EffectiveDate { get; set; }
+        public List<int> EmployeeObjectIds { get; set; }
     }
 }

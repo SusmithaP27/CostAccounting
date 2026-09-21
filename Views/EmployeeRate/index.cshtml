@@ -17,6 +17,9 @@
         <button type="button" class="btn btn-outline-secondary" id="bulkEndDateBtn" disabled>
             <i class="bi bi-calendar-x"></i> Bulk End-Date
         </button>
+        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#seasonalAdjustmentModal">
+            <i class="bi bi-graph-up-arrow"></i> Apply Seasonal Adjustment
+        </button>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeRateModal">
             <i class="bi bi-plus-lg"></i> Add Rate
         </button>
@@ -109,6 +112,49 @@
                     <button type="submit" class="btn btn-primary">Save Rate</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Apply Seasonal Adjustment Modal -->
+<div class="modal fade" id="seasonalAdjustmentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Apply Seasonal Adjustment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">
+                    Rates go up 10% on the first Sunday after Thanksgiving, and back down 10%
+                    on the last Saturday in March. This ends each affected employee's current
+                    rate the day before the effective date and starts a new rate at the
+                    adjusted amount.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label">Direction</label>
+                    <select id="seasonalDirection" class="form-select">
+                        <option value="increase">Increase 10% (post-Thanksgiving)</option>
+                        <option value="decrease">Decrease 10% (end of March)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Effective Date</label>
+                    <input type="date" id="seasonalEffectiveDate" class="form-control" required />
+                    <div class="form-text" id="seasonalDateHint"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Apply To</label>
+                    <select id="seasonalScope" class="form-select">
+                        <option value="all">All active employees with a current rate</option>
+                        <option value="selected">Only the rows currently checked in the grid</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmSeasonalAdjustmentBtn" class="btn btn-warning">Apply</button>
+            </div>
         </div>
     </div>
 </div>
@@ -317,6 +363,58 @@
         .then(res => {
             showToast(res.message, res.success);
             bootstrap.Modal.getInstance(document.getElementById('bulkEndDateModal')).hide();
+            if (res.success) refreshEmployeeRateTable(1);
+        });
+    });
+
+    // Seasonal adjustment: pull the computed dates from the server (SeasonalRateHelper) each
+    // time the modal opens, and default the direction/date to whichever is coming up next.
+    document.getElementById('seasonalAdjustmentModal').addEventListener('show.bs.modal', function () {
+        fetch('/EmployeeRate/GetSeasonalDates')
+            .then(r => r.json())
+            .then(res => {
+                document.getElementById('seasonalDirection').value = res.nextIsIncrease ? 'increase' : 'decrease';
+                document.getElementById('seasonalEffectiveDate').value = res.nextDate;
+                document.getElementById('seasonalDateHint').textContent =
+                    `Next increase: ${res.increaseDate} · Next decrease: ${res.decreaseDate}`;
+            });
+    });
+
+    document.getElementById('confirmSeasonalAdjustmentBtn').addEventListener('click', function () {
+        const isIncrease = document.getElementById('seasonalDirection').value === 'increase';
+        const effectiveDate = document.getElementById('seasonalEffectiveDate').value;
+        const scope = document.getElementById('seasonalScope').value;
+        if (!effectiveDate) return;
+
+        const params = new URLSearchParams();
+        params.set('IsIncrease', isIncrease);
+        params.set('EffectiveDate', effectiveDate);
+        params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
+
+        if (scope === 'selected') {
+            const ids = Array.from(document.querySelectorAll('.rate-row-check:checked')).map(cb => cb.dataset.id);
+            if (ids.length === 0) {
+                showToast('No rows are checked in the grid — switch "Apply To" to all employees, or check some rows first.', false);
+                return;
+            }
+            // These are EmployeeRate ObjectIDs on the grid; the endpoint expects the
+            // *employee* IDs, so resolve each checked rate row back to its employee.
+            ids.forEach(rateId => {
+                const row = document.querySelector(`tr[data-id="${rateId}"]`);
+                const empId = row?.querySelector('.cell-input-always')?.value;
+                if (empId) params.append('EmployeeObjectIds', empId);
+            });
+        }
+
+        fetch('/EmployeeRate/ApplySeasonalAdjustment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success);
+            bootstrap.Modal.getInstance(document.getElementById('seasonalAdjustmentModal')).hide();
             if (res.success) refreshEmployeeRateTable(1);
         });
     });

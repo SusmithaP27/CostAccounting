@@ -85,5 +85,32 @@ namespace CostAccounting.Controllers
             var (success, message) = await _employeeRateService.BulkEndDateAsync(request.ObjectIDs, request.EndDate);
             return Json(new { success, message });
         }
+
+        // Returns the computed seasonal dates (both this year's/next occurrence of each, plus
+        // which one is coming up next) so the Apply Seasonal Adjustment modal can pre-fill
+        // without hardcoding the date math in JS.
+        [HttpGet]
+        public IActionResult GetSeasonalDates()
+        {
+            var today = System.DateTime.Today;
+            var (increaseDate, decreaseDate, nextIsIncrease, nextDate) = SeasonalRateHelper.GetUpcoming(today);
+            return Json(new
+            {
+                increaseDate = increaseDate.ToString("yyyy-MM-dd"),
+                decreaseDate = decreaseDate.ToString("yyyy-MM-dd"),
+                nextIsIncrease,
+                nextDate = nextDate.ToString("yyyy-MM-dd")
+            });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ApplySeasonalAdjustment([FromForm] SeasonalAdjustmentRequest request)
+        {
+            ModelState.Clear();
+            var (success, message) = await _employeeRateService.ApplySeasonalAdjustmentAsync(
+                request.IsIncrease, request.EffectiveDate, request.EmployeeObjectIds, User.Identity.Name);
+            return Json(new { success, message });
+        }
     }
 }

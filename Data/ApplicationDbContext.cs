@@ -83,6 +83,13 @@ modelBuilder.Entity<EmployeeRate>()
 
 modelBuilder.Entity<Employee>().ToTable("Employee");
 modelBuilder.Entity<EmployeeRate>().ToTable("EmployeeRate");
+// Explicit nullability for the varchar columns that allow NULL in the DB, regardless of
+// whether the project has nullable reference types enabled — belt-and-suspenders against
+// the "Data is Null" SqlNullValueException.
+modelBuilder.Entity<Employee>().Property(e => e.MI).IsRequired(false);
+modelBuilder.Entity<Employee>().Property(e => e.Shift).IsRequired(false);
+modelBuilder.Entity<Employee>().Property(e => e.TitleCode).IsRequired(false);
+modelBuilder.Entity<Employee>().Property(e => e.EnteredByUser).IsRequired(false);
         }
     }
 }

@@ -1,40 +1,4 @@
-﻿// namespace CostAccounting.Models
-// {
-//     // Maps 1:1 to the columns returned by usp_GetEmployees
-//     public class EmployeeVM
-//     {
-//         public int EmployeeID { get; set; }
-//         public string? LastName { get; set; }
-//         public string? FirstName { get; set; }
-//         public DateTime? HireDate { get; set; }
-//         public DateTime? LongDate { get; set; }
-//         public string? Status { get; set; }
-//         public decimal? Rate { get; set; }
-
-//         public string FullName => $"{LastName}, {FirstName}".Trim(' ', ',');
-//     }
-
-//     public class EmployeeIndexVM
-//     {
-//         // Table data
-//         public IEnumerable<EmployeeVM> Employees { get; set; } = [];
-
-//         // Filters
-//         public string? SearchTerm { get; set; }
-
-//         // Sort
-//         public string? SortColumn { get; set; }
-//         public string? SortDir { get; set; }
-
-//         // Pagination
-//         public int CurrentPage { get; set; } = 1;
-//         public int PageSize { get; set; } = 25;
-//         public int TotalCount { get; set; }
-//         public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
-//     }
-// }
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace CostAccounting.Models
@@ -42,7 +6,11 @@ namespace CostAccounting.Models
     public class EmployeeVM
     {
         public int ObjectID { get; set; }
+
+        // Auto-generated server-side from MunisCode (padded to 4 digits) — never posted from
+        // the Add/Edit forms, only ever returned for display.
         public string Code { get; set; }
+
         public int? MunisCode { get; set; }
         public string FirstName { get; set; }
         public string MI { get; set; }
@@ -61,6 +29,19 @@ namespace CostAccounting.Models
 
         // Full SSN only ever populated on a single-record edit fetch, never in grid lists.
         public int? SSN { get; set; }
+
+        // Current rate snapshot, sourced from EmployeeRate — grid display only, never edited here.
+        public decimal? BaseRate { get; set; }
+        public decimal? CurrentRate { get; set; }
+
+        public string FullName
+        {
+            get
+            {
+                var mi = string.IsNullOrWhiteSpace(MI) ? "" : $" {MI}.";
+                return $"{FirstName}{mi} {LastName}".Replace("  ", " ").Trim();
+            }
+        }
     }
 
     public class EmployeeIndexVM
