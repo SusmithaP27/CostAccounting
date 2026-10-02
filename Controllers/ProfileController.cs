@@ -20,6 +20,28 @@ namespace CostAccounting.Controllers
         }
 
         [HttpGet]
+public async Task<IActionResult> Index()
+{
+    var user = await _userService.GetByIdAsync(CurrentUserId());
+    if (user == null) return NotFound();
+
+    // Don't let someone with a temporary password browse around first
+    if (user.MustChangePassword)
+        return RedirectToAction(nameof(ChangePassword));
+
+    var vm = new ProfileVM
+    {
+        Username      = user.Username,
+        FullName      = user.FullName,
+        Email         = user.Email,
+        Role          = user.Role,            // adjust to your model, see below
+        LastLoginDate = user.LastLoginDate
+    };
+
+    return View(vm);
+}
+
+        [HttpGet]
         public async Task<IActionResult> ChangePassword()
         {
             ViewBag.IsFirstSignIn = await IsMustChangePasswordAsync();

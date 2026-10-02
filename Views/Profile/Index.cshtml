@@ -1,30 +1,90 @@
 @model CostAccounting.Models.ProfileVM
 @{
     ViewData["Title"] = "My Profile";
+
+    // Initials for the avatar (e.g. "Jane Doe" -> "JD")
+    string name = string.IsNullOrWhiteSpace(Model.FullName) ? Model.Username : Model.FullName;
+    var parts = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+    string initials = parts.Length switch
+    {
+        0 => "?",
+        1 => parts[0][..1].ToUpper(),
+        _ => (parts[0][..1] + parts[^1][..1]).ToUpper()
+    };
 }
 
-<h3>My Profile</h3>
+@* ── PAGE HEADER ─────────────────────────────────────────────────────── *@
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <h4 class="mb-0 fw-semibold">My Profile</h4>
+        <p class="text-muted small mb-0">Your account details</p>
+    </div>
+    <a asp-controller="Profile" asp-action="ChangePassword" class="btn btn-primary btn-sm">
+        <i class="bi bi-key me-1"></i>Change Password
+    </a>
+</div>
 
 @if (TempData["SuccessMessage"] != null)
 {
-    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    <div class="alert alert-success alert-dismissible fade show py-2 small shadow-sm border-0" role="alert">
+        <i class="bi bi-check-circle me-1"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 }
 
-<dl class="row">
-    <dt class="col-sm-3">Username</dt>
-    <dd class="col-sm-9">@Model.Username</dd>
+<div class="row g-3">
 
-    <dt class="col-sm-3">Full Name</dt>
-    <dd class="col-sm-9">@Model.FullName</dd>
+    @* ── IDENTITY CARD ─────────────────────────────────────────────── *@
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center py-4">
+                <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-semibold mb-3"
+                     style="width:84px;height:84px;font-size:1.9rem;">
+                    @initials
+                </div>
+                <h5 class="mb-0 fw-semibold">@name</h5>
+                <div class="text-muted small mb-2 font-monospace">@@@Model.Username</div>
+                @if (!string.IsNullOrWhiteSpace(Model.Role))
+                {
+                    <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2">
+                        <i class="bi bi-shield-check me-1"></i>@Model.Role
+                    </span>
+                }
+            </div>
+        </div>
+    </div>
 
-    <dt class="col-sm-3">Email</dt>
-    <dd class="col-sm-9">@Model.Email</dd>
+    @* ── DETAILS CARD ──────────────────────────────────────────────── *@
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-2 px-3">
+                <span class="fw-semibold small"><i class="bi bi-person-lines-fill me-2 text-primary"></i>Account Information</span>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush small">
+                    <li class="list-group-item d-flex align-items-center py-3 px-3">
+                        <span class="text-muted" style="width:150px"><i class="bi bi-person me-2"></i>Username</span>
+                        <span class="font-monospace">@Model.Username</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center py-3 px-3">
+                        <span class="text-muted" style="width:150px"><i class="bi bi-person-badge me-2"></i>Full Name</span>
+                        <span>@(string.IsNullOrWhiteSpace(Model.FullName) ? "—" : Model.FullName)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center py-3 px-3">
+                        <span class="text-muted" style="width:150px"><i class="bi bi-envelope me-2"></i>Email</span>
+                        <span>@(string.IsNullOrWhiteSpace(Model.Email) ? "—" : Model.Email)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center py-3 px-3">
+                        <span class="text-muted" style="width:150px"><i class="bi bi-shield-check me-2"></i>Role</span>
+                        <span>@(string.IsNullOrWhiteSpace(Model.Role) ? "—" : Model.Role)</span>
+                    </li>
+                    <li class="list-group-item d-flex align-items-center py-3 px-3">
+                        <span class="text-muted" style="width:150px"><i class="bi bi-clock-history me-2"></i>Last Login</span>
+                        <span>@(Model.LastLoginDate?.ToString("MM/dd/yyyy h:mm tt") ?? "Never")</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
 
-    <dt class="col-sm-3">Role</dt>
-    <dd class="col-sm-9">@Model.Role</dd>
-
-    <dt class="col-sm-3">Last Login</dt>
-    <dd class="col-sm-9">@(Model.LastLoginDate?.ToString("g") ?? "Never")</dd>
-</dl>
-
-<a asp-controller="Profile" asp-action="ChangePassword" class="btn btn-secondary">Change Password</a>
+</div>
