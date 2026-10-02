@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CostAccounting.Controllers
 {
+    // User_AccountController.Login redirects here (RedirectToAction("ChangePassword",
+    // "Profile")) whenever user.MustChangePassword is true — first sign-in or after an
+    // admin-initiated password reset from the Users grid.
     [Authorize]
     public class ProfileController : Controller
     {
@@ -16,47 +19,47 @@ namespace CostAccounting.Controllers
             _userService = userService;
         }
 
-        private int CurrentUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
-        public async Task<IActionResult> Index()
-        {
-            var user = await _userService.GetByIdAsync(CurrentUserId);
-            if (user == null) return NotFound();
-
-            var vm = new ProfileVM
-            {
-                ObjectID = user.ObjectID,
-                Username = user.Username,
-                Email = user.Email,
-                FullName = user.FullName,
-                Role = user.Role,
-                LastLoginDate = user.LastLoginDate
-            };
-            return View(vm);
-        }
-
         [HttpGet]
-        public IActionResult ChangePassword() => View(new ResetPasswordVM());
+        public async Task<IActionResult> ChangePassword()
+        {
+            ViewBag.IsFirstSignIn = await IsMustChangePasswordAsync();
+            return View(new ChangePasswordVM());
+        }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangePassword(ResetPasswordVM vm)
+        public async Task<IActionResult> ChangePassword(ChangePasswordVM vm)
         {
-            ModelState.Clear();
-            if (!TryValidateModel(vm))
+            if (!ModelState.IsValid)
+            {
+                ViewBag.IsFirstSignIn = await IsMustChangePasswordAsync();
                 return View(vm);
+            }
 
-            var (success, message) = await _userService.SelfResetPasswordAsync(
-                CurrentUserId, vm.CurrentPassword, vm.NewPassword);
+            var userId = CurrentUserId();
+            var (success, message) = await _userService.SelfResetPasswordAsync(userId, vm.CurrentPassword, vm.NewPassword);
 
             if (!success)
             {
                 ModelState.AddModelError(string.Empty, message);
+                ViewBag.IsFirstSignIn = await IsMustChangePasswordAsync();
                 return View(vm);
             }
 
             TempData["SuccessMessage"] = message;
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", "Home");
+        }
+
+        private int CurrentUserId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        // User_AccountController doesn't put MustChangePassword in the auth cookie's claims,
+        // so this looks it up from the DB each time rather than reading it off User.Claims —
+        // that also means the "Set Your Password" banner correctly disappears the moment the
+        // password is actually changed, without needing to sign out/in first.
+        private async Task<bool> IsMustChangePasswordAsync()
+        {
+            var user = await _userService.GetByIdAsync(CurrentUserId());
+            return user?.MustChangePassword ?? false;
         }
     }
 }

@@ -35,6 +35,7 @@
                 <th class="sortable" data-field="LastName" data-dir="@NextDir("LastName", Model.SortField, Model.SortDirection)">
                     Full Name <i class="bi @SortIcon("LastName", Model.SortField, Model.SortDirection)"></i>
                 </th>
+                <th>Account</th>
                 <th class="sortable" data-field="HireDate" data-dir="@NextDir("HireDate", Model.SortField, Model.SortDirection)">
                     Hire Date <i class="bi @SortIcon("HireDate", Model.SortField, Model.SortDirection)"></i>
                 </th>
@@ -50,13 +51,14 @@
         <tbody>
         @if (!Model.Employees.Any())
         {
-            <tr><td colspan="8" class="text-center text-muted py-4">No employees found.</td></tr>
+            <tr><td colspan="9" class="text-center text-muted py-4">No employees found.</td></tr>
         }
         @foreach (var e in Model.Employees)
         {
             <tr data-id="@e.ObjectID">
                 <td>@e.Code</td>
                 <td>@e.FullName</td>
+                <td>@(string.IsNullOrEmpty(e.AccountName) ? "—" : e.AccountName)</td>
                 <td>@(e.HireDate?.ToString("MM/dd/yyyy") ?? "—")</td>
                 <td>@(e.LongevityDate?.ToString("MM/dd/yyyy") ?? "—")</td>
                 <td>@(e.BaseRate?.ToString("C") ?? "—")</td>

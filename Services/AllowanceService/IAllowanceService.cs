@@ -17,6 +17,7 @@ namespace CostAccounting.Services
         Task<(bool Success, string Message)> UpdateAllowanceAsync(
             int objectId, short? year, decimal? rate, int? subTypeId, bool active);
 
-        Task<(bool Success, string Message)> DeleteAllowancesAsync(List<int> objectIds);
+        // IAllowanceService
+Task<(bool Success, string Message)> DeleteAllowanceAsync(int objectId);
     }
 }

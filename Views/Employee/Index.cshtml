@@ -34,7 +34,7 @@
     <partial name="_EmployeeTable" model="Model" />
 </div>
 
-<!-- Add Employee Modal: minimal fields only — Code is auto-generated from Munis Code -->
+<!-- Add Employee Modal: Code is auto-generated from Munis Code -->
 <div class="modal fade" id="addEmployeeModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -66,6 +66,16 @@
                         <div class="col-md-6">
                             <label class="form-label">Hire Date</label>
                             <input type="date" name="HireDate" class="form-control" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Account</label>
+                            <select name="AccountObjectId" id="addAccountObjectId" class="form-select" required>
+                                <option value="">Select account…</option>
+                                @foreach (var a in Model.AccountOptions)
+                                {
+                                    <option value="@a.ObjectID">@a.Name</option>
+                                }
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -99,10 +109,6 @@
                             <label class="form-label">Munis Code</label>
                             <input type="number" name="MunisCode" id="editMunisCode" class="form-control" required />
                         </div>
-                        @* <div class="col-md-4">
-                            <label class="form-label">SSN</label>
-                            <input type="number" name="SSN" id="editSSN" class="form-control" />
-                        </div> *@
                         <div class="col-md-5">
                             <label class="form-label">First Name</label>
                             <input type="text" name="FirstName" id="editFirstName" class="form-control" required />
@@ -115,14 +121,6 @@
                             <label class="form-label">Last Name</label>
                             <input type="text" name="LastName" id="editLastName" class="form-control" required />
                         </div>
-                        @* <div class="col-md-3">
-                            <label class="form-label">Shift</label>
-                            <input type="text" name="Shift" id="editShift" class="form-control" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Title Code</label>
-                            <input type="text" name="TitleCode" id="editTitleCode" class="form-control" />
-                        </div> *@
                         <div class="col-md-3">
                             <label class="form-label">Hire Date</label>
                             <input type="date" name="HireDate" id="editHireDate" class="form-control" />
@@ -131,22 +129,20 @@
                             <label class="form-label">Termination Date</label>
                             <input type="date" name="TerminationDate" id="editTerminationDate" class="form-control" />
                         </div>
-                        @* <div class="col-md-3">
-                            <label class="form-label">Longevity Rate</label>
-                            <input type="number" step="0.01" name="LongevityRate" id="editLongevityRate" class="form-control" />
-                        </div> *@
                         <div class="col-md-3">
                             <label class="form-label">Longevity Date</label>
                             <input type="date" name="LongevityDate" id="editLongevityDate" class="form-control" />
                         </div>
-                        @* <div class="col-md-3">
-                            <label class="form-label">Employee Type ID</label>
-                            <input type="number" name="EmployeeTypeObjectID" id="editEmployeeTypeObjectID" class="form-control" />
+                        <div class="col-md-6">
+                            <label class="form-label">Account</label>
+                            <select name="AccountObjectId" id="editAccountObjectId" class="form-select">
+                                <option value="">Select account…</option>
+                                @foreach (var a in Model.AccountOptions)
+                                {
+                                    <option value="@a.ObjectID">@a.Name</option>
+                                }
+                            </select>
                         </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Account ID</label>
-                            <input type="number" name="AccountObjectId" id="editAccountObjectId" class="form-control" />
-                        </div> *@
                         <div class="col-md-3 d-flex align-items-end">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="Active" id="editActive" value="true" />
@@ -213,8 +209,7 @@
         return tokenInput ? tokenInput.value : '';
     };
 
-    // Preview of the auto-generated Code, mirroring EmployeeService.GenerateCodeFromMunisCode
-    // (MunisCode padded to a minimum of 4 digits). Server still computes the authoritative value.
+    // Preview of the auto-generated Code, mirroring EmployeeService.GenerateCodeFromMunisCode.
     function previewCode(munisCodeValue) {
         if (!munisCodeValue) return '—';
         return munisCodeValue.toString().padStart(4, '0');
@@ -298,18 +293,13 @@
                     document.getElementById('editObjectID').value = emp.objectID;
                     document.getElementById('editCodePreview').value = emp.code || '';
                     document.getElementById('editMunisCode').value = emp.munisCode || '';
-                    @* document.getElementById('editSSN').value = emp.ssn || ''; *@
                     document.getElementById('editFirstName').value = emp.firstName || '';
                     document.getElementById('editMI').value = emp.mi || '';
                     document.getElementById('editLastName').value = emp.lastName || '';
-                    @* document.getElementById('editShift').value = emp.shift || '';
-                    document.getElementById('editTitleCode').value = emp.titleCode || ''; *@
                     document.getElementById('editHireDate').value = emp.hireDate ? emp.hireDate.substring(0, 10) : '';
                     document.getElementById('editTerminationDate').value = emp.terminationDate ? emp.terminationDate.substring(0, 10) : '';
-                    @* document.getElementById('editLongevityRate').value = emp.longevityRate || ''; *@
                     document.getElementById('editLongevityDate').value = emp.longevityDate ? emp.longevityDate.substring(0, 10) : '';
-                    @* document.getElementById('editEmployeeTypeObjectID').value = emp.employeeTypeObjectID || '';
-                    document.getElementById('editAccountObjectId').value = emp.accountObjectId || ''; *@
+                    document.getElementById('editAccountObjectId').value = emp.accountObjectId || '';
                     document.getElementById('editActive').checked = !!emp.active;
                     new bootstrap.Modal(document.getElementById('editEmployeeModal')).show();
                 });

@@ -56,12 +56,11 @@ namespace CostAccounting.Controllers
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Delete([FromForm] List<int> objectIds)
-        {
-            ModelState.Clear();
-            var (success, message) = await _allowanceService.DeleteAllowancesAsync(objectIds);
-            return Json(new { success, message });
-        }
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> DeleteAllowance(int id)
+{
+    var result = await _allowanceService.DeleteAllowanceAsync(id);
+    return Json(new { success = result.Success, message = result.Message });
+}
     }
 }

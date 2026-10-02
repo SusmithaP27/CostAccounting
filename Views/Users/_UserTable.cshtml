@@ -1,0 +1,264 @@
+@model CostAccounting.Models.UsersIndexPageVM
+
+@functions {
+    string SortIcon(string field, string currentField, string dir)
+        => field == currentField ? (dir == "asc" ? "bi-caret-up-fill" : "bi-caret-down-fill") : "bi-caret-down";
+    string NextDir(string field, string currentField, string dir)
+        => field == currentField && dir == "asc" ? "desc" : "asc";
+
+    List<int?> BuildPageWindow(int current, int total, int window = 1)
+    {
+        var pages = new List<int?>();
+        if (total <= 0) return pages;
+
+        pages.Add(1);
+        if (current - window > 2) pages.Add(null);
+
+        for (int p = Math.Max(2, current - window); p <= Math.Min(total - 1, current + window); p++)
+            pages.Add(p);
+
+        if (current + window < total - 1) pages.Add(null);
+        if (total > 1) pages.Add(total);
+
+        return pages;
+    }
+}
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead>
+            <tr>
+                <th class="sortable" data-field="Username" data-dir="@NextDir("Username", Model.SortField, Model.SortDirection)">
+                    Username <i class="bi @SortIcon("Username", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th class="sortable" data-field="FullName" data-dir="@NextDir("FullName", Model.SortField, Model.SortDirection)">
+                    Full Name <i class="bi @SortIcon("FullName", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th class="sortable" data-field="Email" data-dir="@NextDir("Email", Model.SortField, Model.SortDirection)">
+                    Email <i class="bi @SortIcon("Email", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th class="sortable" data-field="Role" data-dir="@NextDir("Role", Model.SortField, Model.SortDirection)">
+                    Role <i class="bi @SortIcon("Role", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th>Status</th>
+                <th class="sortable" data-field="LastLoginDate" data-dir="@NextDir("LastLoginDate", Model.SortField, Model.SortDirection)">
+                    Last Login <i class="bi @SortIcon("LastLoginDate", Model.SortField, Model.SortDirection)"></i>
+                </th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (!Model.Users.Any())
+        {
+            <tr><td colspan="7" class="text-center text-muted py-4">No users found.</td></tr>
+        }
+        @foreach (var u in Model.Users)
+        {
+            <tr data-id="@u.ObjectID">
+                <td>
+                    @u.Username
+                    <!-- Username isn't editable, but the server-side duplicate check compares
+                         against it, so it rides along on every Save as a fixed hidden value. -->
+                    <input type="hidden" class="cell-input-always" data-field="Username" value="@u.Username" />
+                </td>
+                <td>
+                    <span class="cell-view">@u.FullName</span>
+                    <input type="text" class="form-control form-control-sm cell-input d-none" data-field="FullName" value="@u.FullName" />
+                </td>
+                <td>
+                    <span class="cell-view">@u.Email</span>
+                    <input type="email" class="form-control form-control-sm cell-input d-none" data-field="Email" value="@u.Email" />
+                </td>
+                <td>
+                    <span class="cell-view">@u.Role</span>
+                    <select class="form-select form-select-sm cell-input d-none" data-field="Role">
+                        <option value="User" selected="@(u.Role == "User" ? "selected" : null)">User</option>
+                        <option value="Admin" selected="@(u.Role == "Admin" ? "selected" : null)">Admin</option>
+                    </select>
+                </td>
+                <td>
+                    <span class="cell-view">
+                        @if (u.Active)
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactive</span>
+                        }
+                    </span>
+                    <div class="form-check cell-input d-none" data-field-wrapper="Active">
+                        <input type="checkbox" class="form-check-input" data-field="Active" @(u.Active ? "checked" : "") />
+                        <label class="form-check-label small">Active</label>
+                    </div>
+                </td>
+                <td>@(u.LastLoginDate?.ToString("g") ?? "Never")</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-row" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success btn-save-row d-none" title="Save">
+                        <i class="bi bi-check-lg"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-cancel-row d-none" title="Cancel">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning btn-reset-password"
+                            data-id="@u.ObjectID" data-username="@u.Username" title="Reset Password">
+                        <i class="bi bi-key"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-user"
+                            data-id="@u.ObjectID" data-username="@u.Username" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="card-footer d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span class="text-muted">
+        @if (Model.TotalCount > 0)
+        {
+            @($"Showing {((Model.Page - 1) * Model.PageSize) + 1}-{Math.Min(Model.Page * Model.PageSize, Model.TotalCount)} of {Model.TotalCount}")
+        }
+        else
+        {
+            @("Showing 0 of 0")
+        }
+    </span>
+    <nav>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link page-link-nav" href="#" data-page="@(Model.Page - 1)">Previous</a>
+            </li>
+            @foreach (var p in BuildPageWindow(Model.Page, Model.TotalPages))
+            {
+                if (p == null)
+                {
+                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                }
+                else
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")">
+                        <a class="page-link page-link-nav" href="#" data-page="@p">@p</a>
+                    </li>
+                }
+            }
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link page-link-nav" href="#" data-page="@(Model.Page + 1)">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<script>
+(function () {
+    const container = document.getElementById('userTableContainer');
+    if (!container || container.dataset.wired) return;
+    container.dataset.wired = 'true';
+
+    container.addEventListener('click', function (e) {
+        const sortHeader = e.target.closest('.sortable');
+        if (sortHeader) {
+            window.userSortField = sortHeader.dataset.field;
+            window.userSortDir = sortHeader.dataset.dir;
+            refreshUserTable(1);
+            return;
+        }
+
+        const pageLink = e.target.closest('.page-link-nav');
+        if (pageLink) {
+            e.preventDefault();
+            refreshUserTable(pageLink.dataset.page);
+            return;
+        }
+
+        const editBtn = e.target.closest('.btn-edit-row');
+        if (editBtn) {
+            const row = editBtn.closest('tr');
+            row.querySelectorAll('.cell-view').forEach(el => el.classList.add('d-none'));
+            row.querySelectorAll('.cell-input').forEach(el => el.classList.remove('d-none'));
+            editBtn.classList.add('d-none');
+            row.querySelector('.btn-save-row').classList.remove('d-none');
+            row.querySelector('.btn-cancel-row').classList.remove('d-none');
+            return;
+        }
+
+        const cancelBtn = e.target.closest('.btn-cancel-row');
+        if (cancelBtn) {
+            refreshUserTable(document.querySelector('.page-item.active .page-link-nav')?.dataset.page || 1);
+            return;
+        }
+
+        const saveBtn = e.target.closest('.btn-save-row');
+
+if (saveBtn) {
+    const row = saveBtn.closest('tr');
+    const params = new URLSearchParams();
+
+    // ObjectID
+    params.set('ObjectID', row.dataset.id);
+
+    // Username
+    const usernameInput = row.querySelector('[data-field="Username"]');
+    if (usernameInput) {
+        params.set('Username', usernameInput.value);
+    }
+
+    // Full Name
+    const fullNameInput = row.querySelector('[data-field="FullName"]');
+    if (fullNameInput) {
+        params.set('FullName', fullNameInput.value);
+    }
+
+    // Email
+    const emailInput = row.querySelector('[data-field="Email"]');
+    if (emailInput) {
+        params.set('Email', emailInput.value);
+    }
+
+    // Role
+    const roleInput = row.querySelector('[data-field="Role"]');
+    if (roleInput) {
+        params.set('Role', roleInput.value);
+    }
+
+    // IMPORTANT: explicitly get the checkbox
+    const activeInput = row.querySelector('input[type="checkbox"][data-field="Active"]');
+
+    if (activeInput) {
+        params.set('Active', activeInput.checked ? 'true' : 'false');
+    }
+
+    // Anti-forgery token
+    params.set(
+        '__RequestVerificationToken',
+        window.getUserAntiForgeryToken()
+    );
+
+    console.log('UPDATE PAYLOAD:', params.toString());
+
+    fetch('/Users/Update', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: params.toString()
+    })
+    .then(r => r.json())
+    .then(res => {
+        if (window.showUserToast) {
+            window.showUserToast(res.message, res.success);
+        }
+
+        refreshUserTable(
+            document.querySelector('.page-item.active .page-link-nav')?.dataset.page || 1
+        );
+    });
+}
+    });
+})();
+</script>

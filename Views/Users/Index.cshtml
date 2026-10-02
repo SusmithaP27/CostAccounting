@@ -1,73 +1,209 @@
-@model List<CostAccounting.Models.UserIndexVM>
+@model CostAccounting.Models.UsersIndexPageVM
 @{
     ViewData["Title"] = "User Management";
 }
 
-<h3>User Management</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">User Management</h3>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> New User
+    </a>
+</div>
 
 @if (TempData["SuccessMessage"] != null)
 {
     <div class="alert alert-success">@TempData["SuccessMessage"]</div>
 }
 
-<a asp-action="Create" class="btn btn-primary mb-3">+ New User</a>
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-lg-6">
+                <label class="form-label">Search</label>
+                <div class="position-relative">
+                    <input type="text" id="searchTerm" class="form-control" placeholder="Username, name, or email..." value="@Model.SearchTerm" />
+                    <button type="button" id="clearSearch" class="btn-close position-absolute top-50 end-0 translate-middle-y me-2 d-none" aria-label="Clear"></button>
+                </div>
+            </div>
+            <div class="col-12 col-lg-3">
+                <div class="form-check mt-4">
+                    <input class="form-check-input" type="checkbox" id="showInactive" @(Model.ShowInactive ? "checked" : "") />
+                    <label class="form-check-label" for="showInactive">Show Inactive</label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Source of the antiforgery token for every AJAX POST on this page (inline edit, delete,
+     reset password) now that there's no Edit modal <form> to carry it. -->
 <form id="antiForgeryForm">@Html.AntiForgeryToken()</form>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Username</th>
-            <th>Full Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Active</th>
-            <th>Last Login</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var u in Model)
-        {
-            <tr>
-                <td>@u.Username</td>
-                <td>@u.FullName</td>
-                <td>@u.Email</td>
-                <td>@u.Role</td>
-                <td>@(u.Active ? "Yes" : "No")</td>
-                <td>@(u.LastLoginDate?.ToString("g") ?? "Never")</td>
-                <td>
-                    <button class="btn btn-sm btn-warning reset-pwd-btn"
-                            data-id="@u.ObjectID" data-username="@u.Username">
-                        Reset Password
-                    </button>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div id="userTableContainer">
+    <partial name="_UserTable" model="Model" />
+</div>
+
+<!-- Reset Password Modal (admin-initiated) -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reset Password for <span id="resetPwdUsername"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">New Password</label>
+                <input type="password" id="newPasswordValue" class="form-control" minlength="8" required />
+                <div class="form-text">At least 8 characters. The user will be required to change it on next login.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmResetPasswordBtn" class="btn btn-warning">Reset Password</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Delete user <strong id="deleteUsername"></strong>? This sets the account as deleted and revokes access; it is not physically removed.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmDeleteUserBtn" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="userToast" class="toast align-items-center text-white border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="userToastBody"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
-    <script>
-        document.querySelectorAll('.reset-pwd-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const newPassword = prompt(`New password for ${btn.dataset.username}:`);
-                if (!newPassword) return;
+<script>
+(function () {
+    let deleteTargetId = null;
+    let resetPwdTargetId = null;
 
-                const params = new URLSearchParams();
-                params.append('targetUserObjectID', btn.dataset.id);
-                params.append('newPassword', newPassword);
-                params.append('__RequestVerificationToken',
-                    document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]').value);
+    function showToast(message, isSuccess) {
+        const toastEl = document.getElementById('userToast');
+        const bodyEl = document.getElementById('userToastBody');
+        toastEl.classList.remove('bg-success', 'bg-danger');
+        toastEl.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+        bodyEl.textContent = message;
+        new bootstrap.Toast(toastEl).show();
+    }
+    window.showUserToast = showToast;
 
-                const res = await fetch('/Users/ResetPassword', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: params
-                });
-                const data = await res.json();
-                alert(data.message);
+    window.getUserAntiForgeryToken = function () {
+        const tokenInput = document.querySelector('#antiForgeryForm input[name="__RequestVerificationToken"]');
+        return tokenInput ? tokenInput.value : '';
+    };
+
+    function buildParams(page) {
+        const params = new URLSearchParams();
+        params.set('SearchTerm', document.getElementById('searchTerm').value || '');
+        params.set('ShowInactive', document.getElementById('showInactive').checked);
+        params.set('SortField', window.userSortField || 'Username');
+        params.set('SortDirection', window.userSortDir || 'asc');
+        params.set('Page', page || 1);
+        return params;
+    }
+
+    window.refreshUserTable = function (page) {
+        const params = buildParams(page);
+        fetch('/Users/GetTable?' + params.toString())
+            .then(r => r.text())
+            .then(html => {
+                document.getElementById('userTableContainer').innerHTML = html;
             });
+    };
+
+    document.getElementById('searchTerm').addEventListener('input', function () {
+        document.getElementById('clearSearch').classList.toggle('d-none', this.value.length === 0);
+        refreshUserTable(1);
+    });
+    document.getElementById('clearSearch').addEventListener('click', function () {
+        document.getElementById('searchTerm').value = '';
+        this.classList.add('d-none');
+        refreshUserTable(1);
+    });
+    document.getElementById('showInactive').addEventListener('change', () => refreshUserTable(1));
+
+    // Delete / Reset Password: confirm, then show the relevant modal. Inline edit (Edit/Save/
+    // Cancel per row) is handled entirely inside _UserTable.cshtml's own script, since it only
+    // ever touches that row and doesn't need a modal.
+    document.getElementById('userTableContainer').addEventListener('click', function (e) {
+        const resetBtn = e.target.closest('.btn-reset-password');
+        if (resetBtn) {
+            resetPwdTargetId = resetBtn.dataset.id;
+            document.getElementById('resetPwdUsername').textContent = resetBtn.dataset.username;
+            document.getElementById('newPasswordValue').value = '';
+            new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+            return;
+        }
+
+        const delBtn = e.target.closest('.btn-delete-user');
+        if (delBtn) {
+            deleteTargetId = delBtn.dataset.id;
+            document.getElementById('deleteUsername').textContent = delBtn.dataset.username;
+            new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+        }
+    });
+
+    document.getElementById('confirmResetPasswordBtn').addEventListener('click', function () {
+        const newPassword = document.getElementById('newPasswordValue').value;
+        if (!newPassword || newPassword.length < 8) {
+            showToast('Password must be at least 8 characters.', false);
+            return;
+        }
+        const params = new URLSearchParams();
+        params.set('targetUserObjectID', resetPwdTargetId);
+        params.set('newPassword', newPassword);
+        params.set('__RequestVerificationToken', window.getUserAntiForgeryToken());
+
+        fetch('/Users/ResetPassword', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success);
+            if (res.success) bootstrap.Modal.getInstance(document.getElementById('resetPasswordModal')).hide();
         });
-    </script>
+    });
+
+    document.getElementById('confirmDeleteUserBtn').addEventListener('click', function () {
+        const params = new URLSearchParams();
+        params.set('id', deleteTargetId);
+        params.set('__RequestVerificationToken', window.getUserAntiForgeryToken());
+        fetch('/Users/Delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params.toString()
+        })
+        .then(r => r.json())
+        .then(res => {
+            showToast(res.message, res.success);
+            bootstrap.Modal.getInstance(document.getElementById('deleteUserModal')).hide();
+            if (res.success) refreshUserTable(1);
+        });
+    });
+})();
+</script>
 }

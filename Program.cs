@@ -39,6 +39,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IEmployeeRateService, EmployeeRateService>();
+builder.Services.AddHostedService<CostAccounting.Services.SeasonalRateAdjustmentBackgroundService>();
 
 builder.Services.AddControllersWithViews(options =>
 {

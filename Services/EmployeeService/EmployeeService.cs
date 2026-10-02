@@ -2,7 +2,6 @@
 using CostAccounting.Models;
 using CostAccounting.Data;
 
-
 namespace CostAccounting.Services.EmployeeService
 {
     public class EmployeeService : IEmployeeService
@@ -19,6 +18,31 @@ namespace CostAccounting.Services.EmployeeService
         public static string GenerateCodeFromMunisCode(int munisCode)
         {
             return munisCode.ToString().PadLeft(4, '0');
+        }
+
+        // Pulls LongevityDate from the GetEmployeeDate stored procedure, keyed by MunisCode.
+        // TODO: confirm the real procedure name/params/columns against your DB — this assumes
+        // no parameters and a result set of (MunisCode, LongevityDate) for every employee.
+        // Falls back silently to the table's own LongevityDate column (per employee) if the
+        // call fails, so a wrong name here doesn't take down the whole Employee grid.
+        private async Task<Dictionary<int, DateTime?>> GetLongevityDatesFromStoredProcedureAsync()
+        {
+            try
+            {
+                var rows = await _context.Set<EmployeeDateInfoDto>()
+                    .FromSqlRaw("EXEC dbo.usp_GetEmployees")
+                    .ToListAsync();
+
+                return rows
+                    .Where(r => r.MunisCode.HasValue)
+                    .GroupBy(r => r.MunisCode!.Value)
+                    .ToDictionary(g => g.Key, g => g.First().LongevityDate);
+            }
+            catch
+            {
+                // Swallow and fall back — consider logging this once the real procedure is wired up.
+                return new Dictionary<int, DateTime?>();
+            }
         }
 
         public async Task<List<EmployeeOptionVM>> GetActiveEmployeeOptionsAsync()
@@ -68,18 +92,13 @@ namespace CostAccounting.Services.EmployeeService
                 _ => filter.SortDirection == "asc" ? query.OrderBy(e => e.LastName) : query.OrderByDescending(e => e.LastName),
             };
 
-            // Materialize the raw entities first, then map to VM in memory (matches the
-            // pattern used for the earlier SSN-masking fix, and keeps any string manipulation
-            // off the SQL translation path).
             var entities = await query
                 .Skip((filter.Page - 1) * filter.PageSize)
                 .Take(filter.PageSize)
                 .ToListAsync();
 
-            // Current/base rate for each employee on this page. Pulled as a separate query
-            // (all currently-active rate rows, then filtered in memory to this page's
-            // employee IDs) rather than a Contains()-based join — same workaround used
-            // elsewhere in this app to avoid EF Core's Contains() -> CTE translation issue.
+            // Current/base rate per employee on this page (separate query + in-memory filter,
+            // same Contains()->CTE workaround used elsewhere in this app).
             var employeeIdsOnPage = entities.Select(e => e.ObjectID).ToHashSet();
             var currentRatesByEmployee = (await _context.EmployeeRates
                     .Where(er => !er.Deleted && (er.EndDate == null || er.EndDate >= DateTime.Today))
@@ -88,9 +107,37 @@ namespace CostAccounting.Services.EmployeeService
                 .GroupBy(er => er.EmployeeObjectId)
                 .ToDictionary(g => g.Key, g => g.OrderByDescending(er => er.StartDate).First());
 
+            var longevityDatesByMunisCode = await GetLongevityDatesFromStoredProcedureAsync();
+
+            // Accounts: all rows (including inactive/deleted) so existing employees still show a name.
+            var accountRows = await _context.Accounts
+                .Select(a => new { a.ObjectID, a.Code, a.Description, a.Active, a.Deleted })
+                .ToListAsync();
+
+            var accountNamesById = accountRows.ToDictionary(
+                a => a.ObjectID,
+                a => string.IsNullOrWhiteSpace(a.Description) ? a.Code : $"{a.Code} - {a.Description}");
+
+            // Dropdown source for the Add/Edit modals: active, non-deleted accounts only.
+            filter.AccountOptions = accountRows
+                .Where(a => a.Active == true && a.Deleted != true)
+                .OrderBy(a => a.Code)
+                .Select(a => new AccountOptionVM { ObjectID = a.ObjectID, Name = accountNamesById[a.ObjectID] })
+                .ToList();
+
             filter.Employees = entities.Select(e =>
             {
                 currentRatesByEmployee.TryGetValue(e.ObjectID, out var currentRate);
+
+                DateTime? longevityDate = e.LongevityDate; // fallback
+                if (e.MunisCode.HasValue && longevityDatesByMunisCode.TryGetValue(e.MunisCode.Value, out var spDate))
+                    longevityDate = spDate;
+
+                string? accountName = null;
+                if (e.AccountObjectId.HasValue &&
+                    accountNamesById.TryGetValue(e.AccountObjectId.Value, out var name))
+                    accountName = name;
+
                 return new EmployeeVM
                 {
                     ObjectID = e.ObjectID,
@@ -101,7 +148,7 @@ namespace CostAccounting.Services.EmployeeService
                     LastName = e.LastName,
                     Shift = e.Shift,
                     LongevityRate = e.LongevityRate,
-                    LongevityDate = e.LongevityDate,
+                    LongevityDate = longevityDate,
                     TitleCode = e.TitleCode,
                     TerminationDate = e.TerminationDate,
                     HireDate = e.HireDate,
@@ -109,7 +156,8 @@ namespace CostAccounting.Services.EmployeeService
                     AccountObjectId = e.AccountObjectId,
                     Active = e.Active,
                     BaseRate = currentRate?.BaseRate,
-                    CurrentRate = currentRate?.Rate
+                    CurrentRate = currentRate?.Rate,
+                    AccountName = accountName
                 };
             }).ToList();
 
@@ -153,6 +201,13 @@ namespace CostAccounting.Services.EmployeeService
                 return (false, "Munis Code is required.");
             if (string.IsNullOrWhiteSpace(vm.FirstName) || string.IsNullOrWhiteSpace(vm.LastName))
                 return (false, "First and last name are required.");
+            if (!vm.AccountObjectId.HasValue)
+                return (false, "Account is required.");
+
+            var accountExists = await _context.Accounts
+                .AnyAsync(a => a.ObjectID == vm.AccountObjectId.Value && a.Deleted != true);
+            if (!accountExists)
+                return (false, "Selected account was not found.");
 
             var entity = new Employee
             {
@@ -162,6 +217,7 @@ namespace CostAccounting.Services.EmployeeService
                 MI = vm.MI,
                 LastName = vm.LastName,
                 HireDate = vm.HireDate,
+                AccountObjectId = vm.AccountObjectId,
                 EnteredByUser = enteredByUser,
                 EnteredDate = DateTime.Now,
                 Active = true,
@@ -173,9 +229,7 @@ namespace CostAccounting.Services.EmployeeService
             return (true, $"Employee created successfully (Code {entity.Code}).");
         }
 
-        // Edits everything except rate data (BaseRate/CurrentRate on the VM are display-only
-        // and intentionally never read here — rates are only ever changed through
-        // IEmployeeRateService, including the seasonal adjustment).
+        // Edits everything except rate data (rates are only changed through IEmployeeRateService).
         public async Task<(bool Success, string Message)> UpdateAsync(EmployeeVM vm, string enteredByUser)
         {
             var entity = await _context.Employees.FindAsync(vm.ObjectID);
@@ -185,7 +239,7 @@ namespace CostAccounting.Services.EmployeeService
             if (vm.MunisCode.HasValue)
             {
                 entity.MunisCode = vm.MunisCode;
-                entity.Code = GenerateCodeFromMunisCode(vm.MunisCode.Value); // keep Code in sync with MunisCode
+                entity.Code = GenerateCodeFromMunisCode(vm.MunisCode.Value); // keep Code in sync
             }
 
             entity.FirstName = vm.FirstName;
@@ -195,7 +249,7 @@ namespace CostAccounting.Services.EmployeeService
                 entity.SSN = vm.SSN; // only overwrite if resubmitted; grid never sends full SSN back
             entity.Shift = vm.Shift;
             entity.LongevityRate = vm.LongevityRate;
-            entity.LongevityDate = vm.LongevityDate;
+            // LongevityDate intentionally NOT set here — sourced from the stored procedure.
             entity.TitleCode = vm.TitleCode;
             entity.TerminationDate = vm.TerminationDate;
             entity.HireDate = vm.HireDate;

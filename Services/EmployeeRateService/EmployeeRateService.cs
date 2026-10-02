@@ -192,10 +192,17 @@ namespace CostAccounting.Services.EmployeeRateService
                 .Where(er => targetSet == null || targetSet.Contains(er.EmployeeObjectId))
                 .GroupBy(er => er.EmployeeObjectId)
                 .Select(g => g.OrderByDescending(er => er.StartDate).First())
+                // Idempotency guard: if an employee's "current" rate already starts on
+                // effectiveDate, they were already adjusted for this date (either by an
+                // earlier run today, or a manual re-click) — skip them rather than stacking
+                // a second adjustment on the same day. This is what makes it safe for the
+                // automatic daily background check to call this repeatedly without
+                // double-applying.
+                .Where(er => er.StartDate != effectiveDate)
                 .ToList();
 
             if (!currentRatesByEmployee.Any())
-                return (false, "No matching employees with a current rate were found.");
+                return (true, $"No employees required adjustment for {effectiveDate:MM/dd/yyyy} (already applied, or no eligible employees).");
 
             foreach (var oldRate in currentRatesByEmployee)
             {

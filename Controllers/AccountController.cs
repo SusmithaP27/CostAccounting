@@ -16,8 +16,8 @@ namespace CostAccounting.Controllers
         // ── GET /Account/Index ─────────────────────────────────────────────
         public async Task<IActionResult> Index(
     string? searchTerm,
-    bool? filterActive,
-    int? filterTypeId,
+    bool? filterActive = true,
+    int? filterTypeId = null,
     int page = 1,
     string sortColumn = "Code",
     string sortDirection = "asc")

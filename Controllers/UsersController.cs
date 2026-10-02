@@ -17,8 +17,23 @@ namespace CostAccounting.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var users = await _userService.GetAllAsync();
-            return View(users);
+            var vm = await _userService.GetIndexAsync(new UsersIndexPageVM());
+            return View(vm);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetTable([FromQuery] UsersIndexPageVM filter)
+        {
+            var vm = await _userService.GetIndexAsync(filter);
+            return PartialView("_UserTable", vm);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var vm = await _userService.GetByIdVMAsync(id);
+            if (vm == null) return NotFound();
+            return Json(vm);
         }
 
         [HttpGet]
@@ -41,6 +56,24 @@ namespace CostAccounting.Controllers
 
             TempData["SuccessMessage"] = message;
             return RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Update([FromForm] UserIndexVM model)
+        {
+            ModelState.Clear();
+            var (success, message) = await _userService.UpdateUserAsync(model);
+            return Json(new { success, message });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete([FromForm] int id)
+        {
+            ModelState.Clear();
+            var (success, message) = await _userService.SoftDeleteAsync(id);
+            return Json(new { success, message });
         }
 
         [HttpPost]

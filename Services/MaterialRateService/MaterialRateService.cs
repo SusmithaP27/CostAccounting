@@ -32,6 +32,7 @@ namespace CostAccounting.Services.MaterialRateService
                       m => m.ObjectID,
                       (r, m) => new MaterialRateVM
                       {
+                          ObjectID = r.ObjectID,                    // MaterialRate row id (used by edit/bulk/delete)
                           MaterialObjectId = r.MaterialObjectId,
                           MaterialCode = m.Code,
                           MaterialDescription = m.Description,
@@ -41,24 +42,22 @@ namespace CostAccounting.Services.MaterialRateService
                       });
 
             // ── Material filter ──────────────────────────────────────────────
-            // Only filter by material when showAllMaterials is false AND a material is selected
             if (!showAllMaterials && filterMaterialId.HasValue && filterMaterialId.Value > 0)
                 query = query.Where(r => r.MaterialObjectId == filterMaterialId.Value);
 
             // ── Date filter ──────────────────────────────────────────────────
-            // Only apply when showAllDates is false AND dates are provided
+            // Rates active within the selected range:
+            // StartDate <= filterEnd AND (EndDate >= filterStart OR EndDate is null)
             if (!showAllDates && startDate.HasValue && endDate.HasValue)
             {
                 var sd = startDate.Value.Date;
                 var ed = endDate.Value.Date;
-                // Show rates that are active within the selected date range
-                // i.e. StartDate <= filterEnd AND (EndDate >= filterStart OR EndDate is null)
                 query = query.Where(r =>
                     (r.StartDate == null || r.StartDate.Value <= ed) &&
                     (r.EndDate == null || r.EndDate.Value >= sd));
             }
 
-            // ── Search — use EF-safe Contains (case-insensitive on SQL Server) ──
+            // ── Search ───────────────────────────────────────────────────────
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 var term = searchTerm.Trim();
@@ -78,7 +77,6 @@ namespace CostAccounting.Services.MaterialRateService
                 "startdate" => asc ? query.OrderBy(x => x.StartDate) : query.OrderByDescending(x => x.StartDate),
                 "enddate" => asc ? query.OrderBy(x => x.EndDate) : query.OrderByDescending(x => x.EndDate),
                 "rate" => asc ? query.OrderBy(x => x.Rate) : query.OrderByDescending(x => x.Rate),
-
                 _ => asc ? query.OrderBy(x => x.MaterialCode) : query.OrderByDescending(x => x.MaterialCode),
             };
 
@@ -99,7 +97,6 @@ namespace CostAccounting.Services.MaterialRateService
 
         public async Task<MaterialRateVM> CreateAsync(MaterialRateVM model)
         {
-
             var entity = new MaterialRate
             {
                 EnteredDate = DateTime.UtcNow,
@@ -117,14 +114,13 @@ namespace CostAccounting.Services.MaterialRateService
             return model;
         }
 
-
         public async Task<(bool Success, string Message)> BulkUpdateEndDateAsync(
             IEnumerable<int> objectIds,
             DateTime newEndDate)
         {
             var ids = objectIds.ToList();
             var rows = await _context.MaterialsRate
-                .Where(r => ids.Contains(r.ObjectID))
+                .Where(r => ids.Contains(r.ObjectID) && r.Deleted != true)
                 .ToListAsync();
 
             if (!rows.Any())
@@ -153,6 +149,23 @@ namespace CostAccounting.Services.MaterialRateService
 
             await _context.SaveChangesAsync();
             return (true, "Rate updated.");
+        }
+
+        public async Task<(bool Success, string Message)> DeleteAsync(IEnumerable<int> objectIds)
+        {
+            var ids = objectIds.ToList();
+            var rows = await _context.MaterialsRate
+                .Where(r => ids.Contains(r.ObjectID) && r.Deleted != true)
+                .ToListAsync();
+
+            if (!rows.Any())
+                return (false, "No matching records found.");
+
+            foreach (var row in rows)
+                row.Deleted = true;   // soft delete
+
+            await _context.SaveChangesAsync();
+            return (true, $"{rows.Count} record(s) deleted.");
         }
     }
 }

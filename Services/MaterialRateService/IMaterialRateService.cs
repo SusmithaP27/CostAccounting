@@ -31,5 +31,6 @@ namespace CostAccounting.Services.MaterialRateService
             decimal rate,
             DateTime? startDate,
             DateTime? endDate);
+        Task<(bool Success, string Message)> DeleteAsync(IEnumerable<int> objectIds);
     }
 }

@@ -408,10 +408,11 @@
             });
 
             $('btnOpenAdd').addEventListener('click', () => {
-                ['add_Code','add_Category','add_Make','add_Model','add_Department'].forEach(id => {
+                ['add_Code','add_Category','add_Make','add_Model'].forEach(id => {
                     $(id).value = '';
                     $(id).classList.remove('is-invalid');
                 });
+                $('add_Department').value = 'DEPW - 076';
                 $('add_MfgYear').value = '';
                 $('add_DateInService').value = '';
                 $('add_Active').checked = true;

@@ -10,6 +10,11 @@
     string NextDirection(string column) =>
         Model.SortColumn?.Equals(column, StringComparison.OrdinalIgnoreCase) == true
             && Model.SortDirection == "asc" ? "desc" : "asc";
+
+    // Clear is shown only when something differs from the default (Active = Yes)
+    bool hasActiveFilters = !string.IsNullOrEmpty(Model.SearchTerm)
+                          || Model.FilterTypeId.HasValue
+                          || Model.FilterActive != true;
 }
 
 <div class="container-fluid py-4">
@@ -92,11 +97,11 @@
                     </div>
 
                     <!-- Clear Button -->
-                    @if (!string.IsNullOrEmpty(Model.SearchTerm) || Model.FilterActive.HasValue || Model.FilterTypeId.HasValue)
+                    @if (hasActiveFilters)
                     {
                         <div class="col-auto">
                             <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-x-circle me-1"></i>Refresh
+                                <i class="bi bi-x-circle me-1"></i>Clear
                             </a>
                         </div>
                     }

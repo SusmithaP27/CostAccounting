@@ -18,6 +18,8 @@
     int pEnd = Math.Min(Model.TotalPages, pStart + 4);
 }
 
+<div id="pageState" class="d-none" data-page="@Model.CurrentPage"></div>
+
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0 small" id="ratesTable">
@@ -50,15 +52,15 @@
                     <tr>
                         <td colspan="7" class="text-center py-5 text-muted">
                             <i class="bi bi-bar-chart fs-3 d-block mb-2 opacity-50"></i>
-                            No rates found. Adjust your filters and click Refresh.
+                            No rates found. Adjust your filters or search.
                         </td>
                     </tr>
                 }
                 @foreach (var r in Model.Rates)
                 {
-                    <tr id="rrow-@r.MaterialObjectId">
+                    <tr id="rrow-@r.ObjectID">
                         <td class="ps-3">
-                            <input type="checkbox" class="form-check-input row-chk" value="@r.MaterialObjectId" />
+                            <input type="checkbox" class="form-check-input row-chk" value="@r.ObjectID" />
                         </td>
                         <td>
                             <span class="badge bg-light text-dark border fw-normal font-monospace me-1">@r.MaterialCode</span>
@@ -88,15 +90,15 @@
                         </td>
                         <td class="text-end pe-3 text-nowrap">
                             <button class="btn btn-sm btn-outline-primary py-0 px-2 btn-edit-rate"
-                                    title="Edit" data-id="@r.MaterialObjectId">
+                                    title="Edit" data-id="@r.ObjectID">
                                 <i class="bi bi-pencil"></i>
                             </button>
                             <button class="btn btn-sm btn-success py-0 px-2 btn-save-rate d-none"
-                                    title="Save" data-id="@r.MaterialObjectId">
+                                    title="Save" data-id="@r.ObjectID">
                                 <i class="bi bi-check-lg"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-secondary py-0 px-2 btn-cancel-rate d-none"
-                                    title="Cancel" data-id="@r.MaterialObjectId">
+                                    title="Cancel" data-id="@r.ObjectID">
                                 <i class="bi bi-x-lg"></i>
                             </button>
                         </td>

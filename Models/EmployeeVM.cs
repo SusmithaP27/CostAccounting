@@ -47,6 +47,7 @@ namespace CostAccounting.Models
     public class EmployeeIndexVM
     {
         public List<EmployeeVM> Employees { get; set; } = new List<EmployeeVM>();
+        public List<AccountOptionVM> AccountOptions { get; set; } = new();
 
         public string SearchTerm { get; set; }
         public bool ShowInactive { get; set; }
@@ -56,7 +57,7 @@ namespace CostAccounting.Models
         public string SortDirection { get; set; } = "asc";
 
         public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 25;
+        public int PageSize { get; set; } = 15;
         public int TotalCount { get; set; }
         public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
     }
@@ -66,5 +67,11 @@ namespace CostAccounting.Models
     {
         public int ObjectID { get; set; }
         public string DisplayName { get; set; } // "Last, First (Code)"
+    }
+
+    public class AccountOptionVM
+    {
+        public int ObjectID { get; set; }
+        public string Name { get; set; } = "";
     }
 }

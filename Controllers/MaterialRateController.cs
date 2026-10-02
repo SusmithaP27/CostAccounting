@@ -6,103 +6,116 @@ namespace CostAccounting.Controllers
 {
     public class MaterialRateController : Controller
     {
-        private readonly IMaterialRateService _rateService;
+        private readonly IMaterialRateService _svc;
 
-        public MaterialRateController(IMaterialRateService rateService)
-        {
-            _rateService = rateService;
-        }
+        public MaterialRateController(IMaterialRateService svc) => _svc = svc;
 
-        // GET: /MaterialRates
-
-        //[HttpGet]
+        [HttpGet]
         public async Task<IActionResult> Index(
-            int? filterMaterialId = null,
-            bool showAllMaterials = true,
-            bool showAllDates = true,
+            int? filterMaterialId,
+            bool showAllMaterials = false,
+            bool showAllDates = false,
             DateTime? filterStartDate = null,
             DateTime? filterEndDate = null,
             string? searchTerm = null,
-            string? sortColumn = null,
-            string? sortDir = null,
+            string sortColumn = "MaterialCode",
+            string sortDir = "asc",
             int page = 1,
             int pageSize = 20)
         {
-            var start = filterStartDate ?? DateTime.Today;
-            var end = filterEndDate ?? DateTime.Today;
+            bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
 
-            var (rates, totalCount) = await _rateService.GetRatesAsync(
+            // First visit (no query string): default to showing everything
+            if (!isAjax && Request.Query.Count == 0)
+            {
+                showAllMaterials = true;
+                showAllDates = true;
+            }
+
+            if (page < 1) page = 1;
+
+            var (items, total) = await _svc.GetRatesAsync(
                 filterMaterialId, showAllMaterials, showAllDates,
-                start, end, searchTerm,
-                sortColumn, sortDir,
-                page, pageSize);
+                filterStartDate, filterEndDate, searchTerm,
+                sortColumn, sortDir, page, pageSize);
 
-            var materials = await _rateService.GetMaterialsAsync();
+            // If rows were deleted and this page is now past the end, step back
+            int totalPages = (int)Math.Ceiling(total / (double)pageSize);
+            if (total > 0 && page > totalPages)
+            {
+                page = totalPages;
+                (items, total) = await _svc.GetRatesAsync(
+                    filterMaterialId, showAllMaterials, showAllDates,
+                    filterStartDate, filterEndDate, searchTerm,
+                    sortColumn, sortDir, page, pageSize);
+            }
 
             var vm = new MaterialRateIndexVM
             {
-                Rates = rates,
-                Materials = materials,
+                Rates = items,
+                Materials = await _svc.GetMaterialsAsync(),
                 FilterMaterialId = filterMaterialId,
                 ShowAllMaterials = showAllMaterials,
                 ShowAllDates = showAllDates,
-                FilterStartDate = start,
-                FilterEndDate = end,
+                FilterStartDate = filterStartDate,
+                FilterEndDate = filterEndDate,
                 SearchTerm = searchTerm,
-                SortColumn = sortColumn ?? "MaterialCode",
-                SortDir = sortDir ?? "asc",
+                SortColumn = sortColumn,
+                SortDir = sortDir,
                 CurrentPage = page,
                 PageSize = pageSize,
-                TotalCount = totalCount
+                TotalCount = total
             };
 
-            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                return PartialView("_RatesTable", vm);
-
-            return View(vm);
+            return isAjax ? PartialView("_RatesTable", vm) : View(vm);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(MaterialRateVM model)
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create(int materialObjectId, DateTime? startDate, DateTime? endDate, decimal rate)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage);
-                return Json(new { success = false, message = string.Join(" ", errors) });
-            }
+            if (materialObjectId <= 0) return Json(new { success = false, message = "Select a material." });
+            if (rate <= 0) return Json(new { success = false, message = "Rate must be greater than 0." });
+            if (startDate.HasValue && endDate.HasValue && endDate < startDate)
+                return Json(new { success = false, message = "End date cannot be before start date." });
 
-            var created = await _rateService.CreateAsync(model);
-            return Json(new { success = true, message = "MaterialRates created.", data = created });
+            await _svc.CreateAsync(new MaterialRateVM
+            {
+                MaterialObjectId = materialObjectId,
+                StartDate = startDate,
+                EndDate = endDate,
+                Rate = rate
+            });
+            return Json(new { success = true });
         }
 
-        // POST: /MaterialRates/BulkUpdateEndDate
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateRate(int objectId, decimal rate, DateTime? startDate, DateTime? endDate)
+        {
+            if (startDate.HasValue && endDate.HasValue && endDate < startDate)
+                return Json(new { success = false, message = "End date cannot be before start date." });
+
+            var (ok, msg) = await _svc.UpdateRateAsync(objectId, rate, startDate, endDate);
+            return Json(new { success = ok, message = msg });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> BulkUpdateEndDate(string selectedIds, DateTime newEndDate)
         {
-            if (string.IsNullOrWhiteSpace(selectedIds))
-                return Json(new { success = false, message = "No rows selected." });
-
-            var ids = selectedIds
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => int.TryParse(s, out var n) ? n : 0)
-                .Where(n => n > 0);
-
-            var (success, message) = await _rateService.BulkUpdateEndDateAsync(ids, newEndDate);
-            return Json(new { success, message });
+            var (ok, msg) = await _svc.BulkUpdateEndDateAsync(ParseIds(selectedIds), newEndDate);
+            return Json(new { success = ok, message = msg });
         }
 
-        // POST: /MaterialRates/UpdateRate
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateRate(
-            int objectId, decimal rate, DateTime? startDate, DateTime? endDate)
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> BulkDelete(string selectedIds)
         {
-            var (success, message) = await _rateService.UpdateRateAsync(objectId, rate, startDate, endDate);
-            return Json(new { success, message });
+            var (ok, msg) = await _svc.DeleteAsync(ParseIds(selectedIds));
+            return Json(new { success = ok, message = msg });
         }
+
+        private static List<int> ParseIds(string? csv) =>
+            (csv ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                       .Select(s => int.TryParse(s, out var i) ? i : 0)
+                       .Where(i => i > 0)
+                       .ToList();
     }
 }
