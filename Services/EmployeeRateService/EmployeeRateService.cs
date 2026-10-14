@@ -21,8 +21,8 @@ namespace CostAccounting.Services.EmployeeRateService
                 .Where(er => !er.Deleted && !er.Employee.Deleted)
                 .AsQueryable();
 
-            if (!filter.ShowInactiveEmployees)
-                query = query.Where(er => er.Employee.Active);
+            // if (!filter.ShowInactiveEmployees)
+            //     query = query.Where(er => er.Employee.Active);
 
             if (filter.EmployeeObjectId.HasValue)
                 query = query.Where(er => er.EmployeeObjectId == filter.EmployeeObjectId);
@@ -64,7 +64,7 @@ namespace CostAccounting.Services.EmployeeRateService
                 {
                     ObjectID = er.ObjectID,
                     EmployeeObjectId = er.EmployeeObjectId,
-                    EmployeeName = er.Employee.LastName + ", " + er.Employee.FirstName,
+                    EmployeeName = er.Employee.FirstName + " "  + er.Employee.LastName,
                     EmployeeCode = er.Employee.Code,
                     StartDate = er.StartDate,
                     EndDate = er.EndDate,

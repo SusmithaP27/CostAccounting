@@ -35,7 +35,9 @@ namespace CostAccounting.Data
 
         public DbSet<User> Login_Users { get; set; }
         public DbSet<Employee> Employees { get; set; }
-public DbSet<EmployeeRate> EmployeeRates { get; set; }
+        public DbSet<EmployeeRate> EmployeeRates { get; set; }
+
+        public DbSet<Paycode> Paycodes { get; set; }
 
         
 
@@ -90,6 +92,7 @@ modelBuilder.Entity<Employee>().Property(e => e.MI).IsRequired(false);
 modelBuilder.Entity<Employee>().Property(e => e.Shift).IsRequired(false);
 modelBuilder.Entity<Employee>().Property(e => e.TitleCode).IsRequired(false);
 modelBuilder.Entity<Employee>().Property(e => e.EnteredByUser).IsRequired(false);
+modelBuilder.Entity<Paycode>().ToTable("PayCode", "dbo");
         }
     }
 }

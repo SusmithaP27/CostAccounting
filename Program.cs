@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using CostAccounting.Services.EmployeeRateService;
+using CostAccounting.Services.PaycodeService;
+using CostAccounting.Services.Paycodeservice;
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionsStrings = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -41,6 +43,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IEmployeeRateService, EmployeeRateService>();
 builder.Services.AddScoped<IPdfReportService, PdfReportService>();
+builder.Services.AddScoped<IPaycodeService, Paycodeservice>();
 
 builder.Services.AddControllersWithViews(options =>
 {

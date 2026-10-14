@@ -7,7 +7,7 @@ namespace CostAccounting.Models
     {
         public int ObjectID { get; set; }
         public int EmployeeObjectId { get; set; }
-        public string EmployeeName { get; set; } // resolved via join, like Material name on MaterialRate rows
+        public string EmployeeName { get; set; } 
         public string EmployeeCode { get; set; }
 
         public DateTime StartDate { get; set; }
@@ -25,7 +25,7 @@ namespace CostAccounting.Models
         public string SearchTerm { get; set; }
         public int? EmployeeObjectId { get; set; } // filter to one employee's rate history
         public bool ShowAll { get; set; } // include end-dated rate rows
-        public bool ShowInactiveEmployees { get; set; } // include rates belonging to inactive employees
+        // public bool ShowInactiveEmployees { get; set; } // include rates belonging to inactive employees
         public DateTime? DateRangeStart { get; set; }
         public DateTime? DateRangeEnd { get; set; }
 

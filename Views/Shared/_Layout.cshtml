@@ -109,6 +109,14 @@
                     </li>
 
                     <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 text-white-50 @(ctrl == "Paycode" ? "active bg-white bg-opacity-10 text-white" : "")"
+                           href="@Url.Action("Index", "Paycode")">
+                            <i class="bi bi-cash-coin flex-shrink-0" style="width:18px;text-align:center"></i>
+                            <span class="nav-text">Paycodes</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
                         <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 text-white-50 @(ctrl == "Road" ? "active bg-white bg-opacity-10 text-white" : "")"
                            href="@Url.Action("Index","Road")">
                             <i class="bi bi-sign-turn-right flex-shrink-0" style="width:18px;text-align:center"></i>
