@@ -50,6 +50,10 @@
               "target": "Package",
               "version": "[4.2.0, )"
             },
+            "ClosedXML": {
+              "target": "Package",
+              "version": "[0.105.1, )"
+            },
             "Microsoft.EntityFrameworkCore": {
               "target": "Package",
               "version": "[10.0.10, )"
@@ -75,6 +79,10 @@
             "NuGet.Protocol": {
               "target": "Package",
               "version": "[7.6.0, )"
+            },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2026.9.1, )"
             },
             "Rotativa.AspNetCore": {
               "target": "Package",

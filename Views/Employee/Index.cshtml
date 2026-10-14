@@ -5,9 +5,14 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">Employees</h3>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-        <i class="bi bi-plus-lg"></i> Add Employee
-    </button>
+    <div class="d-flex gap-2">
+        <button type="button" id="exportEmployeesPdf" class="btn btn-outline-danger">
+            <i class="bi bi-file-earmark-pdf"></i> Export to PDF
+        </button>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+            <i class="bi bi-plus-lg"></i> Add Employee
+        </button>
+    </div>
 </div>
 
 <div class="card mb-3">
@@ -344,6 +349,11 @@
             bootstrap.Modal.getInstance(document.getElementById('deleteEmployeeModal')).hide();
             if (res.success) refreshEmployeeTable(1);
         });
+    });
+    
+    document.getElementById('exportEmployeesPdf').addEventListener('click', function () {
+        const params = buildParams(1); // Page is ignored by ExportPdf
+        window.location.href = '/Employee/ExportPdf?' + params.toString();
     });
 })();
 </script>

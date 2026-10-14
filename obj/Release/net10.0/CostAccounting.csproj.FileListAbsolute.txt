@@ -339,3 +339,4 @@ C:\Applications Build\CostAccounting\obj\Release\net10.0\refint\CostAccounting.d
 C:\Applications Build\CostAccounting\obj\Release\net10.0\CostAccounting.pdb
 C:\Applications Build\CostAccounting\obj\Release\net10.0\CostAccounting.genruntimeconfig.cache
 C:\Applications Build\CostAccounting\obj\Release\net10.0\ref\CostAccounting.dll
+C:\Applications Build\CostAccounting\obj\Release\net10.0\CostAccounting.sourcelink.json

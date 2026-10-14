@@ -10,6 +10,7 @@ using CostAccounting.Services.MaterialService;
 using CostAccounting.Services.OperationService;
 using CostAccounting.Services.UserService;
 using CostAccounting.Services.PasswordHasher;
+using CostAccounting.Services.Reports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -39,7 +40,7 @@ builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IEmployeeRateService, EmployeeRateService>();
-builder.Services.AddHostedService<CostAccounting.Services.SeasonalRateAdjustmentBackgroundService>();
+builder.Services.AddScoped<IPdfReportService, PdfReportService>();
 
 builder.Services.AddControllersWithViews(options =>
 {
