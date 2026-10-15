@@ -11,64 +11,64 @@ namespace CostAccounting.Controllers
         public MaterialRateController(IMaterialRateService svc) => _svc = svc;
 
         [HttpGet]
-        public async Task<IActionResult> Index(
-            int? filterMaterialId,
-            bool showAllMaterials = false,
-            bool showAllDates = false,
-            DateTime? filterStartDate = null,
-            DateTime? filterEndDate = null,
-            string? searchTerm = null,
-            string sortColumn = "MaterialCode",
-            string sortDir = "asc",
-            int page = 1,
-            int pageSize = 20)
-        {
-            bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+public async Task<IActionResult> Index(
+    int? filterMaterialId,
+    bool showAllMaterials = true,
+    string? startDateOperator = "<=",
+    DateTime? startDateFilter = null,
+    string? endDateOperator = ">=",
+    DateTime? endDateFilter = null,
+    bool showAllDates = true,
+    string? searchTerm = null,
+    string sortColumn = "MaterialCode",
+    string sortDir = "asc",
+    int page = 1,
+    int pageSize = 25)
+{
+    bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+    if (page < 1) page = 1;
 
-            // First visit (no query string): default to showing everything
-            if (!isAjax && Request.Query.Count == 0)
-            {
-                showAllMaterials = true;
-                showAllDates = true;
-            }
+    var (items, total) = await _svc.GetRatesAsync(
+        filterMaterialId, showAllMaterials,
+        startDateOperator, startDateFilter,
+        endDateOperator, endDateFilter,
+        showAllDates, searchTerm,
+        sortColumn, sortDir, page, pageSize);
 
-            if (page < 1) page = 1;
+    // Rows were deleted and this page is now past the end: step back
+    int totalPages = (int)Math.Ceiling(total / (double)pageSize);
+    if (total > 0 && page > totalPages)
+    {
+        page = totalPages;
+        (items, total) = await _svc.GetRatesAsync(
+            filterMaterialId, showAllMaterials,
+            startDateOperator, startDateFilter,
+            endDateOperator, endDateFilter,
+            showAllDates, searchTerm,
+            sortColumn, sortDir, page, pageSize);
+    }
 
-            var (items, total) = await _svc.GetRatesAsync(
-                filterMaterialId, showAllMaterials, showAllDates,
-                filterStartDate, filterEndDate, searchTerm,
-                sortColumn, sortDir, page, pageSize);
+    var vm = new MaterialRateIndexVM
+    {
+        Rates = items,
+        Materials = await _svc.GetMaterialsAsync(),
+        FilterMaterialId = filterMaterialId,
+        ShowAllMaterials = showAllMaterials,
+        StartDateOperator = startDateOperator,
+        StartDateFilter = startDateFilter,
+        EndDateOperator = endDateOperator,
+        EndDateFilter = endDateFilter,
+        ShowAllDates = showAllDates,
+        SearchTerm = searchTerm,
+        SortColumn = sortColumn,
+        SortDir = sortDir,
+        CurrentPage = page,
+        PageSize = pageSize,
+        TotalCount = total
+    };
 
-            // If rows were deleted and this page is now past the end, step back
-            int totalPages = (int)Math.Ceiling(total / (double)pageSize);
-            if (total > 0 && page > totalPages)
-            {
-                page = totalPages;
-                (items, total) = await _svc.GetRatesAsync(
-                    filterMaterialId, showAllMaterials, showAllDates,
-                    filterStartDate, filterEndDate, searchTerm,
-                    sortColumn, sortDir, page, pageSize);
-            }
-
-            var vm = new MaterialRateIndexVM
-            {
-                Rates = items,
-                Materials = await _svc.GetMaterialsAsync(),
-                FilterMaterialId = filterMaterialId,
-                ShowAllMaterials = showAllMaterials,
-                ShowAllDates = showAllDates,
-                FilterStartDate = filterStartDate,
-                FilterEndDate = filterEndDate,
-                SearchTerm = searchTerm,
-                SortColumn = sortColumn,
-                SortDir = sortDir,
-                CurrentPage = page,
-                PageSize = pageSize,
-                TotalCount = total
-            };
-
-            return isAjax ? PartialView("_RatesTable", vm) : View(vm);
-        }
+    return isAjax ? PartialView("_RatesTable", vm) : View(vm);
+}
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(int materialObjectId, DateTime? startDate, DateTime? endDate, decimal rate)

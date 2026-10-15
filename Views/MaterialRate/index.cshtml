@@ -1,185 +1,183 @@
 ﻿@model CostAccounting.Models.MaterialRateIndexVM
 @{
     ViewData["Title"] = "Material Rates";
-    string startStr = Model.FilterStartDate?.ToString("yyyy-MM-dd");
-    string endStr   = Model.FilterEndDate?.ToString("yyyy-MM-dd");
 }
 
 @Html.AntiForgeryToken()
 
-@* ── PAGE HEADER ─────────────────────────────────────────────────────── *@
-<div class="d-flex align-items-center justify-content-between mb-3">
-    <div>
-        <h4 class="mb-0 fw-semibold">Material Rates</h4>
-        <p class="text-muted small mb-0">
-            @Model.TotalCount record@(Model.TotalCount != 1 ? "s" : "")
-        </p>
-    </div>
-    <button type="button"
-            class="btn btn-primary btn-sm"
-            id="btnOpenAddRate">
-        <i class="bi bi-plus-lg me-1"></i> Add Rate
-    </button>
-</div>
+<h4 class="mb-3 fw-semibold">Material Rates</h4>
 
-@* ── FILTER PANEL ────────────────────────────────────────────────────── *@
+@* ── FILTER BAR ───────────────────────────────────────────────────────── *@
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-3 px-3">
+        <form id="filterForm">
 
-        @* Row 1: Material picker *@
-        <div class="row g-2 align-items-center mb-2">
-            <div class="col-auto">
-                <label class="form-label form-label-sm fw-semibold mb-0" style="min-width:210px">
-                    Show rates for this Material:
-                </label>
-            </div>
-            <div class="col" style="max-width:360px">
-                <select id="filterMaterialId" class="form-select form-select-sm">
-                    <option value="">— Select a Material —</option>
-                    @foreach (var m in Model.Materials)
-                    {
-                        <option value="@m.ObjectID" selected="@(Model.FilterMaterialId == m.ObjectID)">
-                            @m.Code — @m.Description
-                        </option>
-                    }
-                </select>
-            </div>
-            <div class="col-auto">
-                <div class="form-check mb-0">
-                    <input class="form-check-input" type="checkbox" id="showAllMaterials"
-                           @(Model.ShowAllMaterials ? "checked" : "") />
-                    <label class="form-check-label small" for="showAllMaterials">
-                        Show rates for all Materials
-                    </label>
+            @* Row 1: Material selector *@
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-auto">
+                    <label class="form-label form-label-sm mb-0">Show rates for this material:</label>
+                </div>
+                <div class="col-3">
+                    <select id="filterMaterialId" class="form-select form-select-sm"
+                        @(Model.ShowAllMaterials ? "disabled" : "")>
+                        <option value="">— Select a Material —</option>
+                        @foreach (var m in Model.Materials)
+                        {
+                            <option value="@m.ObjectID" selected="@(Model.FilterMaterialId == m.ObjectID)">
+                                @m.Code — @m.Description
+                            </option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showAllMaterials"
+                        @(Model.ShowAllMaterials ? "checked" : "") />
+                        <label class="form-check-label form-label-sm" for="showAllMaterials">
+                            Show rates for all Materials
+                        </label>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        @* Row 2: Start date *@
-        <div class="row g-2 align-items-center mb-1">
-            <div class="col-auto">
-                <label class="form-label form-label-sm mb-0" style="min-width:210px">
-                    Show rates where the start date is:
-                </label>
-            </div>
-            <div class="col-auto">
-                <input type="date" id="filterStartDate" class="form-control form-control-sm"
-                       value="@startStr" style="width:155px"
-                       @(Model.ShowAllDates ? "disabled" : "") />
-            </div>
-            <div class="col-auto ms-2">
-                <div class="form-check mb-0">
-                    <input class="form-check-input" type="checkbox" id="showAllDates"
-                           @(Model.ShowAllDates ? "checked" : "") />
-                    <label class="form-check-label small" for="showAllDates">
-                        Show rates for all dates
-                    </label>
+            @* Row 2: Date filters *@
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-auto">
+                    <label class="form-label form-label-sm mb-0">Show rates where the start date is:</label>
                 </div>
-            </div>
-        </div>
+                <div class="col-auto">
+                    <select id="startDateOperator" class="form-select form-select-sm"
+                        @(Model.ShowAllDates ? "disabled" : "")>
+                        <option value="<=" selected="@(Model.StartDateOperator == "<=")">&#60;=</option>
+                        <option value="<" selected="@(Model.StartDateOperator == "<")">&#60;</option>
+                        <option value=">=" selected="@(Model.StartDateOperator == ">=")">&#62;=</option>
+                        <option value=">" selected="@(Model.StartDateOperator == ">")">&#62;</option>
+                        <option value="=" selected="@(Model.StartDateOperator == "=")">=</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <input id="startDateFilter" type="date" class="form-control form-control-sm"
+                           value="@(Model.StartDateFilter?.ToString("yyyy-MM-dd"))"
+                    @(Model.ShowAllDates ? "disabled" : "") />
+                </div>
 
-        @* Row 3: End date *@
-        <div class="row g-2 align-items-center mb-3">
-            <div class="col-auto">
-                <label class="form-label form-label-sm mb-0" style="min-width:210px">
-                    and the end date is:
-                </label>
-            </div>
-            <div class="col-auto">
-                <input type="date" id="filterEndDate" class="form-control form-control-sm"
-                       value="@endStr" style="width:155px"
-                       @(Model.ShowAllDates ? "disabled" : "") />
-            </div>
-            <div class="col-auto ms-auto">
-                <button type="button" class="btn btn-sm btn-primary px-4" id="btnRefresh">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-                </button>
-            </div>
-        </div>
+                <div class="col-auto ms-2">
+                    <label class="form-label form-label-sm mb-0">and the end date is:</label>
+                </div>
+                <div class="col-auto">
+                    <select id="endDateOperator" class="form-select form-select-sm"
+                        @(Model.ShowAllDates ? "disabled" : "")>
+                        <option value="<=" selected="@(Model.EndDateOperator == "<=")">&#60;=</option>
+                        <option value="<" selected="@(Model.EndDateOperator == "<")">&#60;</option>
+                        <option value=">=" selected="@(Model.EndDateOperator == ">=")">&#62;=</option>
+                        <option value=">" selected="@(Model.EndDateOperator == ">")">&#62;</option>
+                        <option value="=" selected="@(Model.EndDateOperator == "=")">=</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <input id="endDateFilter" type="date" class="form-control form-control-sm"
+                           value="@(Model.EndDateFilter?.ToString("yyyy-MM-dd"))"
+                    @(Model.ShowAllDates ? "disabled" : "") />
+                </div>
 
-        @* Row 4: Live search *@
-        <div class="row g-2 align-items-center border-top pt-2">
-            <div class="col">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-white border-end-0 text-muted">
-                        <i class="bi bi-search"></i>
-                    </span>
-                    <input id="searchTerm" type="text" autocomplete="off"
-                           class="form-control border-start-0 border-end-0 ps-0 bg-white"
-                           placeholder="Search by material code or description…"
-                           value="@Model.SearchTerm" />
-                    <button type="button"
-                            class="btn bg-white border border-start-0 text-muted @(string.IsNullOrEmpty(Model.SearchTerm) ? "d-none" : "")"
-                            id="btnSearchClear" title="Clear search">
-                        <i class="bi bi-x-lg"></i>
+                <div class="col-auto ms-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="showAllDates"
+                        @(Model.ShowAllDates ? "checked" : "") />
+                        <label class="form-check-label form-label-sm" for="showAllDates">
+                            Show rates for all dates
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">Refresh</button>
+                    <button type="button" class="btn btn-sm btn-link text-muted text-decoration-none" id="btnClear">
+                        Clear All
                     </button>
                 </div>
             </div>
-            <div class="col-auto">
-                <button type="button" class="btn btn-sm btn-link text-muted text-decoration-none px-0"
-                        id="btnClear">
-                    <i class="bi bi-x-circle me-1"></i>Clear All
-                </button>
-            </div>
-        </div>
 
+            @* Row 3: Search + Add Rate *@
+            <div class="row g-2 align-items-center justify-content-between">
+                <div class="col-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input id="searchTerm" type="text" autocomplete="off"
+                               class="form-control border-start-0 ps-0 bg-white"
+                               placeholder="Search material code or description…"
+                               value="@Model.SearchTerm" />
+                        <button type="button"
+                                class="btn btn-outline-secondary btn-sm @(string.IsNullOrWhiteSpace(Model.SearchTerm) ? "d-none" : "")"
+                                id="btnClearSearch">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary btn-sm" id="btnOpenAdd" type="button">
+                        <i class="bi bi-plus-lg me-1"></i>Add Rate
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
-@* ── BULK ACTION BAR ─────────────────────────────────────────────────── *@
+@* ── BULK ACTION BAR ──────────────────────────────────────────────────── *@
 <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2 px-3">
-        <div class="row g-2 align-items-center flex-wrap">
+        <div class="row g-2 align-items-center">
             <div class="col-auto">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnCheckAll">
-                    Check All
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary ms-1" id="btnUncheckAll">
-                    Uncheck All
-                </button>
+                <button class="btn btn-sm btn-outline-secondary" id="btnCheckAll" type="button">Check All</button>
+                <button class="btn btn-sm btn-outline-secondary" id="btnUncheckAll" type="button">Uncheck All</button>
             </div>
-            <div class="col-auto border-start ps-3 text-muted small fw-semibold">
-                Update rate end date for selected rows:
+            <div class="col-auto ms-3">
+                <label class="form-label form-label-sm mb-0">
+                    Update rate end dates for selected rows — New rate end date:
+                </label>
             </div>
-            <div class="col-auto d-flex align-items-center gap-2">
-                <label class="form-label form-label-sm mb-0 text-nowrap">New rate end date:</label>
-                <input type="date" id="bulkNewEndDate" class="form-control form-control-sm"
-                       style="width:155px"
+            <div class="col-auto">
+                <input id="newEndDate" type="date" class="form-control form-control-sm"
                        value="@DateTime.Today.ToString("yyyy-MM-dd")" />
             </div>
             <div class="col-auto">
-                <button type="button" class="btn btn-sm btn-primary" id="btnBulkUpdate">
-                    <span id="bulkSpinner"
-                          class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
-                    <i class="bi bi-floppy me-1" id="bulkIcon"></i>Update
-                </button>
-            </div>
-            <div class="col-auto ms-auto">
-                <button type="button" class="btn btn-sm btn-outline-danger" id="btnBulkDelete">
-                    <span id="delSpinner"
-                          class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
-                    <i class="bi bi-trash me-1" id="delIcon"></i>Delete Checked
-                </button>
+                <button class="btn btn-sm btn-primary" id="btnBulkUpdateEndDate" type="button">Update</button>
             </div>
         </div>
     </div>
 </div>
 
-@* ── TABLE ───────────────────────────────────────────────────────────── *@
+@* ── TABLE (AJAX replaces this) ───────────────────────────────────────── *@
 <div id="tableSection">
     @await Html.PartialAsync("_RatesTable", Model)
 </div>
 
-@* ═══════════════════════════════════════════════════════════════════════════
-   MODAL — ADD NEW MATERIAL RATE
-═══════════════════════════════════════════════════════════════════════════ *@
-<div class="modal fade" id="modalAdd" tabindex="-1" aria-labelledby="modalAddLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow">
+@* ── FOOTER: DELETE + PAGINATION + COUNT ─────────────────────────────────
+   #paginationNav is the ONLY pagination control. renderPagination() rebuilds
+   it after every reload. Don't add a pagination footer to _RatesTable. *@
+<div class="d-flex justify-content-between align-items-center mt-2">
+    <div>
+        <button class="btn btn-sm btn-outline-danger" id="btnDeleteChecked" type="button">
+            <i class="bi bi-trash me-1"></i>Delete Checked Rows
+        </button>
+    </div>
+    <nav aria-label="Page navigation" id="paginationNav"></nav>
+    <small class="text-muted">
+        <span id="selectedCount">0</span> selected &nbsp;·&nbsp;
+        <span id="resultCountLabel">@Model.TotalCount results returned</span>
+    </small>
+</div>
 
+@* ── MODAL: ADD RATE ──────────────────────────────────────────────────── *@
+<div class="modal fade" id="modalAdd" tabindex="-1" aria-labelledby="modalAddLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
             <div class="modal-header bg-primary text-white py-2">
                 <h6 class="modal-title mb-0" id="modalAddLabel">
-                    <i class="bi bi-plus-circle me-2"></i>Add New Material Rate
+                    <i class="bi bi-plus-circle me-2"></i>Add New Rate
                 </h6>
                 <button type="button" class="btn-close btn-close-white btn-sm"
                         data-bs-dismiss="modal" aria-label="Close"></button>
@@ -188,59 +186,53 @@
             <div class="modal-body pb-2">
                 <div id="addAlertArea"></div>
                 <div class="row g-3">
-
-                    <div class="col-md-4">
-                        <label class="form-label form-label-sm fw-semibold">Material</label>
-                        <select id="addMaterialtoRatesId" class="form-select form-select-sm">
+                    <div class="col-12">
+                        <label class="form-label form-label-sm fw-semibold">
+                            Material <span class="text-danger">*</span>
+                        </label>
+                        <select id="add_MaterialObjectId" class="form-select form-select-sm">
                             <option value="">— Select a Material —</option>
                             @foreach (var m in Model.Materials)
                             {
-                                <option value="@m.ObjectID">
-                                    @m.Code — @m.Description
-                                </option>
+                                <option value="@m.ObjectID">@m.Code — @m.Description</option>
                             }
                         </select>
                     </div>
-
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label form-label-sm fw-semibold">Start Date</label>
                         <input id="add_StartDate" type="date" class="form-control form-control-sm" />
                     </div>
-
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <label class="form-label form-label-sm fw-semibold">End Date</label>
                         <input id="add_EndDate" type="date" class="form-control form-control-sm" />
                     </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label form-label-sm fw-semibold">Rate</label>
-                        <input id="add_ratevalue" type="number" step="0.0001" class="form-control form-control-sm" />
+                    <div class="col-md-6">
+                        <label class="form-label form-label-sm fw-semibold">
+                            Rate <span class="text-danger">*</span>
+                        </label>
+                        <input id="add_Rate" type="number" step="0.0001" min="0"
+                               class="form-control form-control-sm" />
                     </div>
-
                 </div>
             </div>
 
             <div class="modal-footer py-2">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">
-                    Cancel
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" id="btnSaveAddrate">
-                    <span id="btnSaveAddSpinnerrate"
-                          class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-sm btn-primary" id="btnSaveAdd">
+                    <span id="btnSaveAddSpinner" class="spinner-border spinner-border-sm me-1 d-none" role="status"></span>
                     <i class="bi bi-floppy me-1"></i>Save
                 </button>
             </div>
-
         </div>
     </div>
 </div>
 
-@* ── TOAST ───────────────────────────────────────────────────────────── *@
+@* ── TOAST ────────────────────────────────────────────────────────────── *@
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999">
-    <div id="appToast" class="toast align-items-center border-0" role="alert">
+    <div id="appToast" class="toast align-items-center border-0" role="alert" aria-live="assertive">
         <div class="d-flex">
-            <div class="toast-body fw-medium" id="toastMsg"></div>
-            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+            <div class="toast-body" id="toastMsg"></div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
     </div>
 </div>
@@ -253,121 +245,147 @@
     const $   = id  => document.getElementById(id);
     const qsa = sel => document.querySelectorAll(sel);
 
-    function token() {
-        return document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
-    }
-    function toFormData(obj) {
+    // ── State ────────────────────────────────────────────────────────────
+    let curPage  = @Model.CurrentPage;
+    const pageSize = @Model.PageSize;
+    let sortCol  = '@Model.SortColumn';
+    let sortDir  = '@Model.SortDir';
+    let loadCtrl = null;     // cancels stale requests
+    let searchTimer = null;  // live-search debounce
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    function toFormData(data) {
         const fd = new FormData();
-        fd.append('__RequestVerificationToken', token());
-        for (const [k, v] of Object.entries(obj))
+        const token = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (token) fd.append('__RequestVerificationToken', token.value);
+        for (const [k, v] of Object.entries(data))
             if (v !== null && v !== undefined && v !== '') fd.append(k, v);
         return fd;
     }
+
     async function apiPost(url, data) {
         const res = await fetch(url, { method: 'POST', body: toFormData(data) });
-        if (!res.ok) throw new Error(await res.text() || res.statusText);
+        if (!res.ok) throw new Error((await res.text()) || res.statusText);
         const json = await res.json();
         if (!json.success) throw new Error(json.message ?? 'Request failed.');
         return json;
     }
+
     function showToast(msg, type = 'success') {
-        const el = $('appToast');
+        const t = $('appToast');
         $('toastMsg').textContent = msg;
-        el.className = `toast align-items-center border-0 text-bg-${type}`;
-        bootstrap.Toast.getOrCreateInstance(el, { delay: 3500 }).show();
+        t.className = `toast align-items-center border-0 text-bg-${type}`;
+        bootstrap.Toast.getOrCreateInstance(t, { delay: 3000 }).show();
     }
 
-    // ── State ───────────────────────────────────────────────────────────
-    let sortCol = '@Model.SortColumn';
-    let sortDir = '@Model.SortDir';
-    let curPage = @Model.CurrentPage;
-    let loadCtrl = null;      // cancels stale requests
-    let searchTimer = null;   // debounce for live search
-
-    // ── Filters ─────────────────────────────────────────────────────────
-    function getFilters() {
-        const allMaterials = $('showAllMaterials').checked;
-        const allDates     = $('showAllDates').checked;
-        return {
-            filterMaterialId : allMaterials ? '' : $('filterMaterialId').value,
-            showAllMaterials : allMaterials ? 'true' : '',
-            showAllDates     : allDates ? 'true' : '',
-            filterStartDate  : allDates ? '' : $('filterStartDate').value,
-            filterEndDate    : allDates ? '' : $('filterEndDate').value,
-            searchTerm       : $('searchTerm').value.trim()
-        };
-    }
-
-    function buildQS(page) {
-        const f = getFilters();
+    // ── Query string ─────────────────────────────────────────────────────
+    function buildQS() {
         const p = new URLSearchParams();
-        if (f.filterMaterialId) p.set('filterMaterialId', f.filterMaterialId);
-        if (f.showAllMaterials) p.set('showAllMaterials', f.showAllMaterials);
-        if (f.showAllDates)     p.set('showAllDates',     f.showAllDates);
-        if (f.filterStartDate)  p.set('filterStartDate',  f.filterStartDate);
-        if (f.filterEndDate)    p.set('filterEndDate',    f.filterEndDate);
-        if (f.searchTerm)       p.set('searchTerm',       f.searchTerm);
+
+        const allMat = $('showAllMaterials').checked;
+        p.set('showAllMaterials', allMat);
+        if (!allMat && $('filterMaterialId').value)
+            p.set('filterMaterialId', $('filterMaterialId').value);
+
+        const allDates = $('showAllDates').checked;
+        p.set('showAllDates', allDates);
+        if (!allDates) {
+            p.set('startDateOperator', $('startDateOperator').value);
+            if ($('startDateFilter').value) p.set('startDateFilter', $('startDateFilter').value);
+            p.set('endDateOperator', $('endDateOperator').value);
+            if ($('endDateFilter').value) p.set('endDateFilter', $('endDateFilter').value);
+        }
+
+        const term = $('searchTerm').value.trim();
+        if (term) p.set('searchTerm', term);
+
         p.set('sortColumn', sortCol);
-        p.set('sortDir',    sortDir);
-        p.set('page',       page ?? curPage);
-        p.set('pageSize',   20);
+        p.set('sortDir', sortDir);
+        p.set('page', curPage);
+        p.set('pageSize', pageSize);
         return p.toString();
     }
 
+    // ── AJAX reload ──────────────────────────────────────────────────────
     async function reloadTable(page) {
-        page = page ?? curPage;
-        curPage = page;
+        if (page) curPage = page;
 
         if (loadCtrl) loadCtrl.abort();
         loadCtrl = new AbortController();
-        const ctrl = loadCtrl;
 
         try {
-            const res = await fetch('@Url.Action("Index", "MaterialRate")?' + buildQS(page), {
+            const res = await fetch(`@Url.Action("Index", "MaterialRate")?${buildQS()}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
                 cache: 'no-store',
-                signal: ctrl.signal
+                signal: loadCtrl.signal
             });
             if (!res.ok) throw new Error('Server error ' + res.status);
             $('tableSection').innerHTML = await res.text();
             bindTableEvents();
+            renderPagination();
         } catch (e) {
             if (e.name === 'AbortError') return;
-            showToast('Failed to load: ' + e.message, 'danger');
+            showToast('Failed to load table.', 'danger');
         }
     }
 
-    // ── Filter controls (auto-apply) ────────────────────────────────────
-    $('btnRefresh').addEventListener('click', () => reloadTable(1));
+    // ── Pagination ───────────────────────────────────────────────────────
+    function renderPagination() {
+        const card  = document.querySelector('#tableSection [data-total-count]');
+        const total = card ? +card.dataset.totalCount : 0;
+        // server may have stepped back a page after deletes
+        if (card && card.dataset.currentPage) curPage = +card.dataset.currentPage;
 
-    $('filterMaterialId').addEventListener('change', function () {
-        // Picking a material means "just this one"; clearing it means "all"
-        $('showAllMaterials').checked = !this.value;
+        $('resultCountLabel').textContent = `${total} results returned`;
+
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const nav = $('paginationNav');
+        if (totalPages <= 1) { nav.innerHTML = ''; return; }
+
+        const start = Math.max(1, curPage - 2);
+        const end   = Math.min(totalPages, start + 4);
+
+        let html = '<ul class="pagination pagination-sm mb-0">';
+        html += `<li class="page-item ${curPage <= 1 ? 'disabled' : ''}">
+                    <button class="page-link" data-page="${curPage - 1}"><i class="bi bi-chevron-left"></i></button>
+                 </li>`;
+        for (let p = start; p <= end; p++) {
+            html += `<li class="page-item ${p === curPage ? 'active' : ''}">
+                        <button class="page-link" data-page="${p}">${p}</button>
+                     </li>`;
+        }
+        html += `<li class="page-item ${curPage >= totalPages ? 'disabled' : ''}">
+                    <button class="page-link" data-page="${curPage + 1}"><i class="bi bi-chevron-right"></i></button>
+                 </li>`;
+        html += '</ul>';
+
+        nav.innerHTML = html;
+        nav.querySelectorAll('[data-page]').forEach(btn =>
+            btn.addEventListener('click', () => reloadTable(+btn.dataset.page)));
+    }
+
+    // ── Filter bar ───────────────────────────────────────────────────────
+    $('filterForm').addEventListener('submit', e => { e.preventDefault(); reloadTable(1); });
+
+    $('showAllMaterials').addEventListener('change', () => {
+        $('filterMaterialId').disabled = $('showAllMaterials').checked;
         reloadTable(1);
     });
+    $('filterMaterialId').addEventListener('change', () => reloadTable(1));
 
-    $('showAllMaterials').addEventListener('change', function () {
-        if (this.checked) $('filterMaterialId').value = '';
+    $('showAllDates').addEventListener('change', () => {
+        const off = $('showAllDates').checked;
+        ['startDateOperator', 'startDateFilter', 'endDateOperator', 'endDateFilter']
+            .forEach(id => $(id).disabled = off);
         reloadTable(1);
     });
+    ['startDateOperator', 'startDateFilter', 'endDateOperator', 'endDateFilter'].forEach(id =>
+        $(id).addEventListener('change', () => reloadTable(1)));
 
-    $('showAllDates').addEventListener('change', function () {
-        $('filterStartDate').disabled = this.checked;
-        $('filterEndDate').disabled   = this.checked;
-        reloadTable(1);
-    });
-
-    ['filterStartDate', 'filterEndDate'].forEach(id =>
-        $(id).addEventListener('change', () => {
-            // date filter needs both dates
-            if ($('filterStartDate').value && $('filterEndDate').value) reloadTable(1);
-        }));
-
-    // ── Live search + clear ─────────────────────────────────────────────
+    // Live search
     const searchEl = $('searchTerm');
-
     function syncSearchClear() {
-        $('btnSearchClear').classList.toggle('d-none', !searchEl.value);
+        $('btnClearSearch').classList.toggle('d-none', !searchEl.value);
     }
     function clearSearch() {
         clearTimeout(searchTimer);
@@ -375,104 +393,92 @@
         syncSearchClear();
         reloadTable(1);
     }
-
     searchEl.addEventListener('input', () => {
         syncSearchClear();
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => reloadTable(1), 300);
     });
     searchEl.addEventListener('keydown', e => {
-        if (e.key === 'Enter')  { clearTimeout(searchTimer); reloadTable(1); }
+        if (e.key === 'Enter')  { e.preventDefault(); clearTimeout(searchTimer); reloadTable(1); }
         if (e.key === 'Escape') { clearSearch(); }
     });
-    $('btnSearchClear').addEventListener('click', () => { clearSearch(); searchEl.focus(); });
+    $('btnClearSearch').addEventListener('click', () => { clearSearch(); searchEl.focus(); });
 
-    // ── Clear All ───────────────────────────────────────────────────────
+    // Clear All
     $('btnClear').addEventListener('click', () => {
-        $('filterMaterialId').value   = '';
         $('showAllMaterials').checked = true;
-        $('showAllDates').checked     = true;
-        $('filterStartDate').value    = '';
-        $('filterEndDate').value      = '';
-        $('filterStartDate').disabled = true;
-        $('filterEndDate').disabled   = true;
+        $('filterMaterialId').value = '';
+        $('filterMaterialId').disabled = true;
+
+        $('showAllDates').checked = true;
+        $('startDateOperator').value = '<=';
+        $('endDateOperator').value = '>=';
+        $('startDateFilter').value = '';
+        $('endDateFilter').value = '';
+        ['startDateOperator', 'startDateFilter', 'endDateOperator', 'endDateFilter']
+            .forEach(id => $(id).disabled = true);
+
+        clearTimeout(searchTimer);
         searchEl.value = '';
         syncSearchClear();
-        clearTimeout(searchTimer);
         sortCol = 'MaterialCode';
         sortDir = 'asc';
         reloadTable(1);
     });
 
-    // ── Check / uncheck ─────────────────────────────────────────────────
-    $('btnCheckAll')  .addEventListener('click', () => { qsa('.row-chk').forEach(c => c.checked = true);  updateCount(); });
-    $('btnUncheckAll').addEventListener('click', () => { qsa('.row-chk').forEach(c => c.checked = false); updateCount(); });
-
+    // ── Selection ────────────────────────────────────────────────────────
     function updateCount() {
-        const el = $('selectedCount');
-        if (el) el.textContent = qsa('.row-chk:checked').length;
+        $('selectedCount').textContent = qsa('.row-select:checked').length;
     }
-    function selectedIds() {
-        return [...qsa('.row-chk:checked')].map(c => c.value);
+    function getSelectedIds() {
+        return [...qsa('.row-select:checked')].map(cb => cb.dataset.id);
     }
+    $('btnCheckAll').addEventListener('click', () => {
+        qsa('.row-select').forEach(cb => cb.checked = true);
+        updateCount();
+    });
+    $('btnUncheckAll').addEventListener('click', () => {
+        qsa('.row-select').forEach(cb => cb.checked = false);
+        updateCount();
+    });
 
-    // ── Bulk update end date ────────────────────────────────────────────
-    $('btnBulkUpdate').addEventListener('click', async () => {
-        const ids = selectedIds();
-        if (!ids.length) { showToast('Please select at least one row.', 'warning'); return; }
+    // ── Bulk update end date ─────────────────────────────────────────────
+    $('btnBulkUpdateEndDate').addEventListener('click', async () => {
+        const ids = getSelectedIds();
+        if (!ids.length) { showToast('Select at least one row.', 'danger'); return; }
+        if (!$('newEndDate').value) { showToast('Pick a new end date.', 'danger'); return; }
 
-        const newDate = $('bulkNewEndDate').value;
-        if (!newDate) { showToast('Please set a new end date.', 'warning'); return; }
-
-        $('bulkSpinner').classList.remove('d-none');
-        $('bulkIcon').classList.add('d-none');
-        $('btnBulkUpdate').disabled = true;
         try {
             const r = await apiPost('@Url.Action("BulkUpdateEndDate", "MaterialRate")', {
                 selectedIds: ids.join(','),
-                newEndDate : newDate
+                newEndDate : $('newEndDate').value
             });
-            showToast(r.message ?? 'Updated successfully.');
+            showToast(r.message ?? `${ids.length} row(s) updated.`);
             reloadTable(curPage);
-        } catch (e) {
-            showToast(e.message, 'danger');
-        } finally {
-            $('bulkSpinner').classList.add('d-none');
-            $('bulkIcon').classList.remove('d-none');
-            $('btnBulkUpdate').disabled = false;
+        } catch (err) {
+            showToast('Update failed: ' + err.message, 'danger');
         }
     });
 
-    // ── Bulk delete ─────────────────────────────────────────────────────
-    $('btnBulkDelete').addEventListener('click', async () => {
-        const ids = selectedIds();
-        if (!ids.length) { showToast('Please select at least one row.', 'warning'); return; }
-        if (!confirm(`Delete ${ids.length} selected rate(s)? This cannot be undone from this screen.`)) return;
+    // ── Bulk delete ──────────────────────────────────────────────────────
+    $('btnDeleteChecked').addEventListener('click', async () => {
+        const ids = getSelectedIds();
+        if (!ids.length) { showToast('Select at least one row.', 'danger'); return; }
+        if (!confirm(`Delete ${ids.length} selected rate(s)? This cannot be undone.`)) return;
 
-        $('delSpinner').classList.remove('d-none');
-        $('delIcon').classList.add('d-none');
-        $('btnBulkDelete').disabled = true;
         try {
             const r = await apiPost('@Url.Action("BulkDelete", "MaterialRate")', {
                 selectedIds: ids.join(',')
             });
-            showToast(r.message ?? 'Deleted successfully.');
-            reloadTable(curPage);
-        } catch (e) {
-            showToast(e.message, 'danger');
-        } finally {
-            $('delSpinner').classList.add('d-none');
-            $('delIcon').classList.remove('d-none');
-            $('btnBulkDelete').disabled = false;
+            showToast(r.message ?? `${ids.length} row(s) deleted.`);
+            reloadTable(curPage);   // server steps back if the page is now empty
+        } catch (err) {
+            showToast('Delete failed: ' + err.message, 'danger');
         }
     });
 
-    // ── Table events (re-bound after every AJAX reload) ─────────────────
+    // ── Table events (re-bound after every reload) ───────────────────────
     function bindTableEvents() {
-        // keep JS page in sync with what the server actually rendered
-        const ps = $('pageState');
-        if (ps) curPage = +ps.dataset.page || 1;
-
         qsa('.sortable[data-sort]').forEach(th => {
             th.style.cursor = 'pointer';
             th.style.userSelect = 'none';
@@ -484,61 +490,55 @@
             });
         });
 
-        qsa('[data-page]').forEach(btn =>
-            btn.addEventListener('click', () => reloadTable(+btn.dataset.page)));
-
         const chkAll = $('chkAll');
-        if (chkAll) {
-            chkAll.addEventListener('change', function () {
-                qsa('.row-chk').forEach(c => c.checked = this.checked);
-                updateCount();
-            });
-        }
-        qsa('.row-chk').forEach(c => c.addEventListener('change', updateCount));
+        if (chkAll) chkAll.addEventListener('change', function () {
+            qsa('.row-select').forEach(c => c.checked = this.checked);
+            updateCount();
+        });
+        qsa('.row-select').forEach(c => c.addEventListener('change', updateCount));
 
-        qsa('.btn-edit-rate')  .forEach(b => b.addEventListener('click', () => enterEdit(b.dataset.id)));
-        qsa('.btn-save-rate')  .forEach(b => b.addEventListener('click', () => saveRate(b.dataset.id)));
-        qsa('.btn-cancel-rate').forEach(b => b.addEventListener('click', () => reloadTable(curPage)));
+        qsa('.btn-edit').forEach(b => b.addEventListener('click', () => enterEdit(b.dataset.id)));
+        qsa('.btn-save').forEach(b => b.addEventListener('click', () => saveInline(b.dataset.id)));
+        qsa('.btn-cancel').forEach(b => b.addEventListener('click', () => reloadTable(curPage)));
 
         updateCount();
     }
 
-    // ── Inline edit ─────────────────────────────────────────────────────
     function enterEdit(id) {
-        const row = document.getElementById('rrow-' + id);
-        row.querySelectorAll('.cell-view') .forEach(el => el.classList.add('d-none'));
+        const row = $('row-' + id);
+        row.querySelectorAll('.cell-view').forEach(el => el.classList.add('d-none'));
         row.querySelectorAll('.cell-input').forEach(el => el.classList.remove('d-none'));
-        row.querySelector('.btn-edit-rate')  .classList.add('d-none');
-        row.querySelector('.btn-save-rate')  .classList.remove('d-none');
-        row.querySelector('.btn-cancel-rate').classList.remove('d-none');
+        row.querySelector('.btn-edit').classList.add('d-none');
+        row.querySelector('.btn-save').classList.remove('d-none');
+        row.querySelector('.btn-cancel').classList.remove('d-none');
         row.querySelector('.cell-input')?.focus();
     }
 
-    async function saveRate(id) {
-        const row = document.getElementById('rrow-' + id);
+    async function saveInline(id) {
+        const row = $('row-' + id);
         const get = f => row.querySelector(`[data-field="${f}"]`)?.value ?? '';
-        const btn = row.querySelector('.btn-save-rate');
+        const btn = row.querySelector('.btn-save');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
         try {
             await apiPost('@Url.Action("UpdateRate", "MaterialRate")', {
-                objectId  : id,
-                rate      : get('rate'),
-                startDate : get('startDate'),
-                endDate   : get('endDate')
+                objectId : id,
+                rate     : get('rate') || 0,
+                startDate: get('startDate'),
+                endDate  : get('endDate')
             });
             showToast('Rate updated.');
             reloadTable(curPage);
-        } catch (e) {
-            showToast(e.message, 'danger');
+        } catch (err) {
+            showToast('Save failed: ' + err.message, 'danger');
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-check-lg"></i>';
         }
     }
 
-    // ── Add Rate modal ──────────────────────────────────────────────────
-    $('btnOpenAddRate').addEventListener('click', () => {
-        ['addMaterialtoRatesId', 'add_StartDate', 'add_EndDate', 'add_ratevalue'].forEach(id => {
+    // ── Add modal ────────────────────────────────────────────────────────
+    $('btnOpenAdd').addEventListener('click', () => {
+        ['add_MaterialObjectId', 'add_StartDate', 'add_EndDate', 'add_Rate'].forEach(id => {
             $(id).value = '';
             $(id).classList.remove('is-invalid');
         });
@@ -546,34 +546,29 @@
         bootstrap.Modal.getOrCreateInstance($('modalAdd')).show();
     });
 
-    $('btnSaveAddrate').addEventListener('click', async () => {
-        const materialEl  = $('addMaterialtoRatesId');
-        const startDateEl = $('add_StartDate');
-        const rateEl      = $('add_ratevalue');
+    $('btnSaveAdd').addEventListener('click', async () => {
+        const matEl  = $('add_MaterialObjectId');
+        const rateEl = $('add_Rate');
 
-        const checks = [
-            [materialEl,  !!materialEl.value],
-            [startDateEl, !!startDateEl.value],
-            [rateEl,      !!rateEl.value && parseFloat(rateEl.value) > 0]
-        ];
-        let isValid = true;
-        checks.forEach(([el, ok]) => { el.classList.toggle('is-invalid', !ok); if (!ok) isValid = false; });
-        if (!isValid) return;
+        const matOk  = !!matEl.value;
+        const rateOk = !!rateEl.value && parseFloat(rateEl.value) > 0;
+        matEl.classList.toggle('is-invalid', !matOk);
+        rateEl.classList.toggle('is-invalid', !rateOk);
+        if (!matOk || !rateOk) return;
 
-        const payload = {
-            materialObjectId: +materialEl.value,
-            startDate: startDateEl.value || null,
-            endDate  : $('add_EndDate').value || null,
-            rate     : parseFloat(rateEl.value)
-        };
-
-        const spinner = $('btnSaveAddSpinnerrate');
+        const spinner = $('btnSaveAddSpinner');
         spinner.classList.remove('d-none');
-        $('btnSaveAddrate').disabled = true;
+        $('btnSaveAdd').disabled = true;
+
         try {
-            await apiPost('@Url.Action("Create", "MaterialRate")', payload);
+            await apiPost('@Url.Action("Create", "MaterialRate")', {
+                materialObjectId: matEl.value,
+                startDate: $('add_StartDate').value,
+                endDate  : $('add_EndDate').value,
+                rate     : rateEl.value
+            });
             bootstrap.Modal.getInstance($('modalAdd')).hide();
-            showToast('Material Rate added successfully.');
+            showToast('Rate added successfully.');
             reloadTable(1);
         } catch (err) {
             $('addAlertArea').innerHTML =
@@ -582,21 +577,20 @@
                  </div>`;
         } finally {
             spinner.classList.add('d-none');
-            $('btnSaveAddrate').disabled = false;
+            $('btnSaveAdd').disabled = false;
         }
     });
 
     $('modalAdd').addEventListener('keydown', e => {
         if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
             e.preventDefault();
-            $('btnSaveAddrate').click();
+            $('btnSaveAdd').click();
         }
     });
 
-    // ── Initial state ───────────────────────────────────────────────────
+    // ── Initial bind ─────────────────────────────────────────────────────
     bindTableEvents();
-    $('filterStartDate').disabled = $('showAllDates').checked;
-    $('filterEndDate').disabled   = $('showAllDates').checked;
+    renderPagination();
 })();
 </script>
 }

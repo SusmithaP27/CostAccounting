@@ -3,46 +3,37 @@
     public class MaterialRateVM
     {
         public int ObjectID { get; set; }
-        public int MaterialObjectId { get; set; }   // MaterialRate.ObjectID (also FK to Material)
+        public int MaterialObjectId { get; set; }
         public string? MaterialCode { get; set; }
         public string? MaterialDescription { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
         public decimal Rate { get; set; }
-        public decimal BaseRate { get; set; }
-        public bool Selected { get; set; }   // checkbox for bulk update
     }
 
     public class MaterialRateIndexVM
     {
-        // Table data
         public IEnumerable<MaterialRateVM> Rates { get; set; } = [];
-
-        // Material picker dropdown
         public IEnumerable<Material> Materials { get; set; } = [];
 
-        // Filters
+        // ── Filters ──────────────────────────────────────────────────────
         public int? FilterMaterialId { get; set; }
-        public bool ShowAllMaterials { get; set; } = false;
-        public bool ShowAllDates { get; set; } = false;
-        public DateTime? FilterStartDate { get; set; }
-        public DateTime? FilterEndDate { get; set; }
+        public bool ShowAllMaterials { get; set; } = true;
+        public string? StartDateOperator { get; set; } = "<=";
+        public DateTime? StartDateFilter { get; set; }
+        public string? EndDateOperator { get; set; } = ">=";
+        public DateTime? EndDateFilter { get; set; }
+        public bool ShowAllDates { get; set; } = true;
         public string? SearchTerm { get; set; }
 
-        // Bulk-update fields
-        public DateTime? BulkNewEndDate { get; set; }
-
-        // Sort
+        // ── Sort ─────────────────────────────────────────────────────────
         public string SortColumn { get; set; } = "MaterialCode";
         public string SortDir { get; set; } = "asc";
 
-        // Pagination
+        // ── Pagination ───────────────────────────────────────────────────
         public int CurrentPage { get; set; } = 1;
-        public int PageSize { get; set; } = 20;
+        public int PageSize { get; set; } = 25;
         public int TotalCount { get; set; }
         public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
-
-        // Stats
-        public int DisplayedCount => Rates.Count();
     }
 }

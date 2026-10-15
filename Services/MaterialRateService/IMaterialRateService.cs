@@ -5,16 +5,18 @@ namespace CostAccounting.Services.MaterialRateService
     public interface IMaterialRateService
     {
         Task<(IEnumerable<MaterialRateVM> Items, int TotalCount)> GetRatesAsync(
-            int? filterMaterialId,
-            bool showAllMaterials,
-            bool showAllDates,
-            DateTime? startDate,
-            DateTime? endDate,
-            string? searchTerm,
-            string? sortColumn,
-            string? sortDir,
-            int page,
-            int pageSize);
+    int? filterMaterialId,
+    bool showAllMaterials,
+    string? startDateOperator,
+    DateTime? startDateFilter,
+    string? endDateOperator,
+    DateTime? endDateFilter,
+    bool showAllDates,
+    string? searchTerm,
+    string? sortColumn,
+    string? sortDir,
+    int page,
+    int pageSize);
 
         Task<IEnumerable<Material>> GetMaterialsAsync();
 
