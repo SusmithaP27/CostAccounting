@@ -1,4 +1,5 @@
-﻿using CostAccounting.Models;
+﻿using CostAccounting.Helpers;
+using CostAccounting.Models;
 using CostAccounting.Services.MaterialRateService;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,11 +24,11 @@ public async Task<IActionResult> Index(
     string sortColumn = "MaterialCode",
     string sortDir = "asc",
     int page = 1,
-    int pageSize = 25)
+    int pageSize = 15)
 {
     bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
     if (page < 1) page = 1;
-
+    pageSize = PagingDefaults.Normalize(pageSize);
     var (items, total) = await _svc.GetRatesAsync(
         filterMaterialId, showAllMaterials,
         startDateOperator, startDateFilter,

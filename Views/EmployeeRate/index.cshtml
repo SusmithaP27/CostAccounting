@@ -211,6 +211,9 @@
 (function () {
     let deleteTargetId = null;
 
+    // Rows per page: starts at what the server rendered, changed by the footer dropdown
+    window.employeeRatePageSize = @Model.PageSize;
+
     function showToast(message, isSuccess) {
         const toastEl = document.getElementById('employeeRateToast');
         const bodyEl = document.getElementById('employeeRateToastBody');
@@ -230,12 +233,12 @@
         return tokenInput ? tokenInput.value : '';
     };
 
-
     function buildParams(page) {
         const params = new URLSearchParams();
         params.set('SearchTerm', document.getElementById('searchTerm').value || '');
         params.set('ShowAll', document.getElementById('showAll').checked);
-        params.set('ShowInactiveEmployees', document.getElementById('showInactiveEmployees').checked);
+        // "Include inactive employees" checkbox is commented out in the view above
+        params.set('ShowInactiveEmployees', document.getElementById('showInactiveEmployees')?.checked ?? false);
         const empId = document.getElementById('employeeObjectIdFilter').value;
         if (empId) params.set('EmployeeObjectId', empId);
         const start = document.getElementById('dateRangeStart').value;
@@ -245,6 +248,7 @@
         params.set('SortField', window.employeeRateSortField || 'EmployeeName');
         params.set('SortDirection', window.employeeRateSortDir || 'asc');
         params.set('Page', page || 1);
+        params.set('PageSize', window.employeeRatePageSize || 15);
         return params;
     }
 
@@ -269,9 +273,8 @@
     });
 
     // Every filter control resets to page 1 on change — this is what stops the grid from
-    // landing on an out-of-range page after a filter shrinks the result set (e.g. unchecking
-    // "include inactive employees" and appearing to show nothing because it was still on page 6).
-    ['showAll', 'showInactiveEmployees', 'dateRangeStart', 'dateRangeEnd'].forEach(id => {
+    // landing on an out-of-range page after a filter shrinks the result set.
+    ['showAll', 'dateRangeStart', 'dateRangeEnd'].forEach(id => {
         document.getElementById(id).addEventListener('change', () => refreshEmployeeRateTable(1));
     });
 
@@ -304,7 +307,15 @@
         btn.textContent = checked.length > 0 ? `Bulk End-Date (${checked.length})` : 'Bulk End-Date';
     }
 
+    // One delegated 'change' listener for everything inside the (re-rendered) table container:
+    // the rows-per-page dropdown and the row / select-all checkboxes.
     document.getElementById('employeeRateTableContainer').addEventListener('change', function (e) {
+        if (e.target.id === 'pageSizeSelect') {
+            window.employeeRatePageSize = +e.target.value;
+            refreshEmployeeRateTable(1);
+            return;
+        }
+
         if (e.target.classList.contains('rate-row-check') || e.target.id === 'selectAllRates') {
             if (e.target.id === 'selectAllRates') {
                 document.querySelectorAll('.rate-row-check').forEach(cb => cb.checked = e.target.checked);

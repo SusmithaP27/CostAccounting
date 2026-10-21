@@ -1,6 +1,7 @@
 ﻿using CostAccounting.Models;
 using CostAccounting.Services.AccountService;
 using Microsoft.AspNetCore.Mvc;
+using CostAccounting.Helpers;
 
 namespace CostAccounting.Controllers
 {
@@ -19,10 +20,13 @@ namespace CostAccounting.Controllers
     bool? filterActive = true,
     int? filterTypeId = null,
     int page = 1,
+    int pageSize = 15,
     string sortColumn = "Code",
     string sortDirection = "asc")
 {
-    const int pageSize = 15;
+    
+    if (page < 1) page = 1;
+    pageSize = PagingDefaults.Normalize(pageSize);
 
     // True first visit (no querystring at all) → default to Active only.
     // Once the filter form has been submitted once, filterActive is always

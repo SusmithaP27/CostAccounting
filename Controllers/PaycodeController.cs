@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 using CostAccounting.Services.PaycodeService;
 using CostAccounting.Models;
+using CostAccounting.Helpers;
 
 [Authorize]
 public class PaycodeController : Controller
@@ -15,6 +16,8 @@ public class PaycodeController : Controller
     public async Task<IActionResult> Index(PaycodeIndexVM q)
     {
         ModelState.Clear();
+        if (q.CurrentPage < 1) q.CurrentPage = 1;
+        q.PageSize = PagingDefaults.Normalize(q.PageSize);
         return View(await _service.GetPagedAsync(q));
     }
 

@@ -4,6 +4,7 @@ using CostAccounting.Services;
 using CostAccounting.Models;
 using CostAccounting.Services.EmployeeRateService;
 using CostAccounting.Services.EmployeeService;
+using CostAccounting.Helpers;
 
 namespace CostAccounting.Controllers
 {
@@ -38,6 +39,9 @@ namespace CostAccounting.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTable([FromQuery] EmployeeRateIndexVM filter)
         {
+            if (filter.Page < 1) filter.Page = 1;
+            filter.PageSize = PagingDefaults.Normalize(filter.PageSize);
+            
             var vm = await _employeeRateService.GetIndexAsync(filter);
             return PartialView("_EmployeeRateTable", vm);
         }

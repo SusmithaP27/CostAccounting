@@ -155,20 +155,26 @@
     @await Html.PartialAsync("_RatesTable", Model)
 </div>
 
-@* ── FOOTER: DELETE + PAGINATION + COUNT ─────────────────────────────────
+@* ── FOOTER: DELETE + PAGINATION + ROWS PER PAGE + COUNT ─────────────────
    #paginationNav is the ONLY pagination control. renderPagination() rebuilds
-   it after every reload. Don't add a pagination footer to _RatesTable. *@
+   it after every reload. This footer sits OUTSIDE #tableSection, so the rows-per-page
+   dropdown is never replaced by AJAX and is always visible. *@
 <div class="d-flex justify-content-between align-items-center mt-2">
     <div>
         <button class="btn btn-sm btn-outline-danger" id="btnDeleteChecked" type="button">
             <i class="bi bi-trash me-1"></i>Delete Checked Rows
         </button>
     </div>
+
     <nav aria-label="Page navigation" id="paginationNav"></nav>
-    <small class="text-muted">
-        <span id="selectedCount">0</span> selected &nbsp;·&nbsp;
-        <span id="resultCountLabel">@Model.TotalCount results returned</span>
-    </small>
+
+    <div class="d-flex align-items-center gap-3">
+        <partial name="_PageSizeSelect" model="Model.PageSize" />
+        <small class="text-muted text-nowrap">
+            <span id="selectedCount">0</span> selected &nbsp;·&nbsp;
+            <span id="resultCountLabel">@Model.TotalCount results returned</span>
+        </small>
+    </div>
 </div>
 
 @* ── MODAL: ADD RATE ──────────────────────────────────────────────────── *@
@@ -247,7 +253,7 @@
 
     // ── State ────────────────────────────────────────────────────────────
     let curPage  = @Model.CurrentPage;
-    const pageSize = @Model.PageSize;
+    let pageSize = @Model.PageSize;      // rows per page: changed by the footer dropdown
     let sortCol  = '@Model.SortColumn';
     let sortDir  = '@Model.SortDir';
     let loadCtrl = null;     // cancels stale requests
@@ -382,6 +388,13 @@
     ['startDateOperator', 'startDateFilter', 'endDateOperator', 'endDateFilter'].forEach(id =>
         $(id).addEventListener('change', () => reloadTable(1)));
 
+    // ── Rows per page ────────────────────────────────────────────────────
+    // The dropdown sits outside #tableSection, so it is bound once and never replaced.
+    $('pageSizeSelect').addEventListener('change', function () {
+        pageSize = +this.value;
+        reloadTable(1);
+    });
+
     // Live search
     const searchEl = $('searchTerm');
     function syncSearchClear() {
@@ -404,7 +417,7 @@
     });
     $('btnClearSearch').addEventListener('click', () => { clearSearch(); searchEl.focus(); });
 
-    // Clear All
+    // Clear All (keeps the chosen rows per page)
     $('btnClear').addEventListener('click', () => {
         $('showAllMaterials').checked = true;
         $('filterMaterialId').value = '';

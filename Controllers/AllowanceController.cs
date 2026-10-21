@@ -1,5 +1,6 @@
 ﻿using CostAccounting.Services;
 using Microsoft.AspNetCore.Mvc;
+using CostAccounting.Helpers;
 
 namespace CostAccounting.Controllers
 {
@@ -14,8 +15,11 @@ namespace CostAccounting.Controllers
 
         public async Task<IActionResult> Index(
             int? filterYear, bool? filterActive, int? filterSubTypeId,
-            string sortColumn = "Year", string sortDirection = "desc", int page = 1)
+            string sortColumn = "Year", string sortDirection = "desc", int page = 1,int pageSize = 15)
         {
+            if (page < 1) page = 1;
+            pageSize = PagingDefaults.Normalize(pageSize);
+
             bool isFirstVisit = !Request.Query.ContainsKey("filterActive")
                               && !Request.Query.ContainsKey("filterYear")
                               && !Request.Query.ContainsKey("filterSubTypeId")
@@ -25,7 +29,7 @@ namespace CostAccounting.Controllers
                 filterActive = true;
 
             var vm = await _allowanceService.GetAllowancesAsync(
-                filterYear, filterActive, filterSubTypeId, sortColumn, sortDirection, page, 15);
+                filterYear, filterActive, filterSubTypeId, sortColumn, sortDirection, page, pageSize);
 
             return View(vm);
         }

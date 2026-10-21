@@ -11,6 +11,17 @@
         Model.SortColumn?.Equals(column, StringComparison.OrdinalIgnoreCase) == true
             && Model.SortDirection == "asc" ? "desc" : "asc";
 
+    // Pager / sort links all carry the current filters AND the chosen page size
+    string PageUrl(int p) => Url.Action("Index", new {
+        searchTerm    = Model.SearchTerm,
+        filterActive  = Model.FilterActive,
+        filterTypeId  = Model.FilterTypeId,
+        page          = p,
+        pageSize      = Model.PageSize,
+        sortColumn    = Model.SortColumn,
+        sortDirection = Model.SortDirection
+    })!;
+
     // Clear is shown only when something differs from the default (Active = Yes)
     bool hasActiveFilters = !string.IsNullOrEmpty(Model.SearchTerm)
                           || Model.FilterTypeId.HasValue
@@ -24,7 +35,7 @@
         <div>
             <h4 class="mb-0 fw-bold">
                 <i class="bi bi-wallet2 text-primary me-2"></i>Accounts
-            </h4>   
+            </h4>
         </div>
         <button class="btn btn-primary btn-sm" onclick="openAddModal()">
             <i class="bi bi-plus-lg me-1"></i> Add New Account
@@ -35,6 +46,7 @@
     <form method="get" id="filterForm">
         <input type="hidden" name="sortColumn" id="sortColumnInput" value="@Model.SortColumn" />
         <input type="hidden" name="sortDirection" id="sortDirectionInput" value="@Model.SortDirection" />
+        <input type="hidden" name="pageSize" id="pageSizeInput" value="@Model.PageSize" />
         <div class="card shadow-sm mb-3">
             <div class="card-body py-2">
                 <div class="row g-2 align-items-center">
@@ -96,11 +108,11 @@
                         </button>
                     </div>
 
-                    <!-- Clear Button -->
+                    <!-- Clear Button (keeps the chosen page size) -->
                     @if (hasActiveFilters)
                     {
                         <div class="col-auto">
-                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                            <a href="@Url.Action("Index", new { pageSize = Model.PageSize })" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-x-circle me-1"></i>Clear
                             </a>
                         </div>
@@ -145,6 +157,7 @@
                                             filterActive = Model.FilterActive,
                                             filterTypeId = Model.FilterTypeId,
                                             page = 1,
+                                            pageSize = Model.PageSize,
                                             sortColumn = c.Col,
                                             sortDirection = NextDirection(c.Col)
                                        })">
@@ -301,12 +314,10 @@
                         <ul class="pagination pagination-sm mb-0">
 
                             <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
-                                <a class="page-link"
-                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = 1, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">«</a>
+                                <a class="page-link" href="@PageUrl(1)">«</a>
                             </li>
                             <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
-                                <a class="page-link"
-                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = Model.CurrentPage - 1, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">‹</a>
+                                <a class="page-link" href="@PageUrl(Model.CurrentPage - 1)">‹</a>
                             </li>
 
                             @{
@@ -317,23 +328,22 @@
                             @for (int p = startPage; p <= endPage; p++)
                             {
                                 <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
-                                    <a class="page-link"
-                                       href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = p, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">@p</a>
+                                    <a class="page-link" href="@PageUrl(p)">@p</a>
                                 </li>
                             }
 
                             <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
-                                <a class="page-link"
-                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = Model.CurrentPage + 1, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">›</a>
+                                <a class="page-link" href="@PageUrl(Model.CurrentPage + 1)">›</a>
                             </li>
                             <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
-                                <a class="page-link"
-                                   href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterTypeId = Model.FilterTypeId, page = Model.TotalPages, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection })">»</a>
+                                <a class="page-link" href="@PageUrl(Model.TotalPages)">»</a>
                             </li>
 
                         </ul>
                     </nav>
                 }
+
+                <partial name="_PageSizeSelect" model="Model.PageSize" />
             </div>
         }
     </div>
@@ -460,7 +470,6 @@
             document.getElementById('newCode').value          = '';
             document.getElementById('newDescription').value   = '';
             document.getElementById('newTypeId').value        = '';
-            //document.getElementById('newEnteredByUser').value = '';
             document.getElementById('newActive').checked      = true;
             document.getElementById('modalError').classList.add('d-none');
 
@@ -669,29 +678,28 @@
         }
 
         // ── Soft Delete ───────────────────────────────────────────────
-    async function deleteRow(id) {
-        if (!confirm('Delete this road record?')) return;
-        try {
-            const res  = await fetch('@Url.Action("SoftDelete","Account")', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ id, __RequestVerificationToken: token })
-            });
-            const data = await res.json();
-            if (data.success) {
-                const row = document.getElementById('row-' + id);
-                row.style.transition = 'opacity 0.4s';
-                row.style.opacity = '0';
-                setTimeout(() => row.remove(), 400);
-                showToast('Record deleted.', 'success');
-            } else {
-                showToast(data.message || 'Delete failed.', 'danger');
+        async function deleteRow(id) {
+            if (!confirm('Delete this account?')) return;
+            try {
+                const res  = await fetch('@Url.Action("SoftDelete","Account")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ id, __RequestVerificationToken: token })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const row = document.getElementById('row-' + id);
+                    row.style.transition = 'opacity 0.4s';
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 400);
+                    showToast('Record deleted.', 'success');
+                } else {
+                    showToast(data.message || 'Delete failed.', 'danger');
+                }
+            } catch {
+                showToast('Network error.', 'danger');
             }
-        } catch {
-            showToast('Network error.', 'danger');
         }
-    }
-
 
         // ── Badge helpers ─────────────────────────────────────────────
         function activeBadge(val) {
@@ -714,6 +722,12 @@
         document.getElementById('searchInput').addEventListener('input', function () {
             clearTimeout(searchTimer);
             searchTimer = setTimeout(() => document.getElementById('filterForm').submit(), 500);
+        });
+
+        // ── Rows per page ─────────────────────────────────────────────
+        document.getElementById('pageSizeSelect').addEventListener('change', function () {
+            document.getElementById('pageSizeInput').value = this.value;
+            document.getElementById('filterForm').submit();   // page isn't in the form, so it resets to 1
         });
     </script>
 }

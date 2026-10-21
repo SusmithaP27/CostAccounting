@@ -199,6 +199,9 @@
 (function () {
     let deleteTargetId = null;
 
+    // Rows per page: starts at what the server rendered, changed by the footer dropdown
+    window.employeePageSize = @Model.PageSize;
+
     function showToast(message, isSuccess) {
         const toastEl = document.getElementById('employeeToast');
         const bodyEl = document.getElementById('employeeToastBody');
@@ -234,6 +237,7 @@
         params.set('SortField', window.employeeSortField || 'LastName');
         params.set('SortDirection', window.employeeSortDir || 'asc');
         params.set('Page', page || 1);
+        params.set('PageSize', window.employeePageSize || 15);
         return params;
     }
 
@@ -256,6 +260,15 @@
         refreshEmployeeTable(1);
     });
     document.getElementById('showInactive').addEventListener('change', () => refreshEmployeeTable(1));
+
+    // Rows per page: the select lives inside the table partial (re-rendered on every reload),
+    // so listen on the persistent container instead of the select itself.
+    document.getElementById('employeeTableContainer').addEventListener('change', function (e) {
+        if (e.target && e.target.id === 'pageSizeSelect') {
+            window.employeePageSize = +e.target.value;
+            refreshEmployeeTable(1);
+        }
+    });
 
     document.getElementById('addEmployeeForm').addEventListener('submit', function (e) {
         e.preventDefault();
@@ -352,7 +365,7 @@
     });
     
     document.getElementById('exportEmployeesPdf').addEventListener('click', function () {
-        const params = buildParams(1); // Page is ignored by ExportPdf
+        const params = buildParams(1); // Page and PageSize are overridden by ExportPdf (no paging)
         window.location.href = '/Employee/ExportPdf?' + params.toString();
     });
 })();

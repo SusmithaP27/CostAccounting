@@ -1,5 +1,4 @@
-﻿
-@model CostAccounting.Models.MaterialIndexVM
+﻿@model CostAccounting.Models.MaterialIndexVM
 @{
     ViewData["Title"] = "Materials";
 
@@ -23,6 +22,7 @@
 
     <input type="hidden" name="sortColumn" id="sortColumnInput" value="@sortCol" />
     <input type="hidden" name="sortDir" id="sortDirectionInput" value="@sortDir" />
+    <input type="hidden" name="pageSize" id="pageSizeInput" value="@Model.PageSize" />
 
     <div class="card shadow-sm mb-3">
         <div class="card-body py-2">
@@ -118,13 +118,13 @@
                     </button>
                 </div>
 
-                <!-- Clear Button -->
+                <!-- Clear Button (keeps the chosen page size) -->
                 @if (!string.IsNullOrEmpty(Model.SearchTerm)
                     || Model.FilterActive.HasValue
                     || Model.FilterTypeId.HasValue)
                 {
                     <div class="col-auto">
-                        <a href="@Url.Action("Index")"
+                        <a href="@Url.Action("Index", new { pageSize = Model.PageSize })"
                            class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-x-circle me-1"></i>
                             Refresh
@@ -292,6 +292,7 @@
     let sortCol  = '@sortCol';
     let sortDir  = '@sortDir';
     let curPage  = @Model.CurrentPage;
+    let pageSize = @Model.PageSize;     // rows per page: set by the footer dropdown
 
     const $ = id => document.getElementById(id);
 
@@ -328,28 +329,28 @@
 
     function buildQS(page) {
 
-    const p = new URLSearchParams();
+        const p = new URLSearchParams();
 
-    const search = $('searchInput')?.value;
-    const active = $('filterActive')?.value;
-    const typeId = $('filterTypeId')?.value;
+        const search = $('searchInput')?.value;
+        const active = $('filterActive')?.value;
+        const typeId = $('filterTypeId')?.value;
 
-    if (search)
-        p.set('searchTerm', search);
+        if (search)
+            p.set('searchTerm', search);
 
-    if (active)
-        p.set('filterActive', active);
+        if (active)
+            p.set('filterActive', active);
 
-    if (typeId)
-        p.set('filterTypeId', typeId);
+        if (typeId)
+            p.set('filterTypeId', typeId);
 
-    p.set('sortColumn', sortCol);
-    p.set('sortDir', sortDir);
-    p.set('page', page);
-    p.set('pageSize', 15);
+        p.set('sortColumn', sortCol);
+        p.set('sortDir', sortDir);
+        p.set('page', page);
+        p.set('pageSize', pageSize);
 
-    return p.toString();
-}
+        return p.toString();
+    }
 
     async function reloadTable(page) {
         curPage = page;
@@ -381,22 +382,34 @@
 
     $('filterActive')?.addEventListener('change', () => reloadTable(1));
     $('filterTypeId')?.addEventListener('change', () => reloadTable(1));
+
     // ── Search debounce ───────────────────────────────────────────────
-let searchTimer;
+    let searchTimer;
 
-$('searchInput')?.addEventListener('input', function () {
+    $('searchInput')?.addEventListener('input', function () {
 
-    clearTimeout(searchTimer);
+        clearTimeout(searchTimer);
 
-    searchTimer = setTimeout(() => {
-        reloadTable(1);
-    }, 500);
+        searchTimer = setTimeout(() => {
+            reloadTable(1);
+        }, 500);
 
-});
+    });
+
+    // ── Rows per page ─────────────────────────────────────────────────
+    // The dropdown lives inside the table partial (re-rendered on every reload), so listen
+    // on the persistent #tableSection instead of the select itself.
+    $('tableSection').addEventListener('change', function (e) {
+        if (e.target && e.target.id === 'pageSizeSelect') {
+            pageSize = +e.target.value;
+            $('pageSizeInput').value = pageSize;   // keeps the form's own GET submits in sync
+            reloadTable(1);
+        }
+    });
 
     // ── RESET / CLEAR ────────────────────────────────────────────────────
     $('btnResetFilters')?.addEventListener('click', () => {
-        $('searchTerm').value = '';
+        $('searchInput').value = '';
         $('filterActive').value = '';
         $('filterTypeId').value = '';
         sortCol = 'Code';

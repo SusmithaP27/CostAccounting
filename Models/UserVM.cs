@@ -80,7 +80,7 @@ namespace CostAccounting.Models
         public string SortDirection { get; set; } = "asc";
 
         public int Page { get; set; } = 1;
-        public int PageSize { get; set; } = 25;
+        public int PageSize { get; set; } = 15;
         public int TotalCount { get; set; }
         public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
     }

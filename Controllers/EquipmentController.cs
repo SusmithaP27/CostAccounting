@@ -147,6 +147,7 @@
 using CostAccounting.Models;
 using CostAccounting.Services.EquipmentService;
 using Microsoft.AspNetCore.Mvc;
+using CostAccounting.Helpers;
 
 namespace CostAccounting.Controllers
 {
@@ -168,6 +169,7 @@ namespace CostAccounting.Controllers
             int page = 1,
             int pageSize = 15)
         {
+            pageSize = PagingDefaults.Normalize(pageSize);
             var (equipments, totalCount) = await _service.GetEquipmentsAsync(
                 searchTerm, filterActive, filterTypeId,
                 sortColumn, sortDir, page, pageSize);

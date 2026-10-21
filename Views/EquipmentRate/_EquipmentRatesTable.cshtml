@@ -115,14 +115,6 @@
         </table>
     </div>
 
-    @* NOTE: Pagination intentionally lives ONLY in Index.cshtml's #paginationNav,
-       which is rebuilt client-side by renderPagination() after every reload and
-       has its click handlers bound there. A second, server-rendered pagination
-       footer used to live here — its buttons were never wired to any JS click
-       handler (bindTableEvents() only binds .btn-edit/.btn-save/.btn-cancel),
-       so clicking them silently did nothing. Removed to avoid a dead duplicate
-       control. If you want pagination visually attached to the table instead,
-       move the <nav id="paginationNav"> markup from Index.cshtml into this
-       card as a card-footer and update the $('paginationNav') lookup in
-       renderPagination() accordingly — do not re-add a second copy here. *@
+    @* NOTE: Pagination and the rows-per-page dropdown live in Index.cshtml (outside this partial),
+       so AJAX reloads of this table never replace them. Do not add a footer here. *@
 </div>

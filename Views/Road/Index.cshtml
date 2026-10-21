@@ -11,6 +11,18 @@
         Model.SortColumn?.Equals(column, StringComparison.OrdinalIgnoreCase) == true
             && Model.SortDirection == "asc" ? "desc" : "asc";
 
+    // Pager links carry the current filters, sort AND the chosen page size
+    string PageUrl(int p) => Url.Action("Index", new
+    {
+        searchTerm = Model.SearchTerm,
+        filterActive = Model.FilterActive,
+        filterEngineering = Model.FilterEngineering,
+        sortColumn = Model.SortColumn,
+        sortDirection = Model.SortDirection,
+        page = p,
+        pageSize = Model.PageSize
+    })!;
+
     bool hasActiveFilters = !string.IsNullOrEmpty(Model.SearchTerm)
                           || Model.FilterEngineering.HasValue
                           || Model.FilterActive != true;
@@ -32,6 +44,7 @@
     <form method="get" id="filterForm">
         <input type="hidden" name="sortColumn" value="@Model.SortColumn" />
         <input type="hidden" name="sortDirection" value="@Model.SortDirection" />
+        <input type="hidden" name="pageSize" id="pageSizeInput" value="@Model.PageSize" />
         <div class="card shadow-sm mb-3">
             <div class="card-body py-2">
                 <div class="row g-2 align-items-center">
@@ -84,11 +97,11 @@
                         </button>
                     </div>
 
-                    <!-- Clear Button -->
+                    <!-- Clear Button (keeps the chosen page size) -->
                     @if (hasActiveFilters)
                     {
                         <div class="col-auto">
-                            <a href="@Url.Action("Index")" class="btn btn-outline-secondary btn-sm">
+                            <a href="@Url.Action("Index", new { pageSize = Model.PageSize })" class="btn btn-outline-secondary btn-sm">
                                 <i class="bi bi-x-circle me-1"></i>Clear
                             </a>
                         </div>
@@ -132,6 +145,7 @@
                                             filterActive = Model.FilterActive,
                                             filterEngineering = Model.FilterEngineering,
                                             page = 1,
+                                            pageSize = Model.PageSize,
                                             sortColumn = c.Col,
                                             sortDirection = NextDirection(c.Col)
                                        })">
@@ -245,8 +259,10 @@
             </div>
         </div>
 
-        <!-- Pagination Footer -->
-        @if (Model.TotalPages > 1)
+        <!-- Pagination Footer
+             Shown whenever there are records (not only when TotalPages > 1), so the
+             rows-per-page dropdown never disappears after choosing a large size. -->
+        @if (Model.TotalCount > 0)
         {
             <div class="card-footer d-flex justify-content-between align-items-center py-2">
                 <small class="text-muted">
@@ -255,40 +271,45 @@
                     of <strong>@Model.TotalCount</strong> records
                 </small>
 
-                <nav>
-                    <ul class="pagination pagination-sm mb-0">
+                @if (Model.TotalPages > 1)
+                {
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
 
-                        <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
-                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = 1 })">«</a>
-                        </li>
-
-                        <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
-                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.CurrentPage - 1 })">‹</a>
-                        </li>
-
-                        @{
-                            int startPage = Math.Max(1, Model.CurrentPage - 2);
-                            int endPage   = Math.Min(Model.TotalPages, startPage + 4);
-                            startPage     = Math.Max(1, endPage - 4);
-                        }
-
-                        @for (int p = startPage; p <= endPage; p++)
-                        {
-                            <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
-                                <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = p })">@p</a>
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="@PageUrl(1)">«</a>
                             </li>
-                        }
 
-                        <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
-                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.CurrentPage + 1 })">›</a>
-                        </li>
+                            <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
+                                <a class="page-link" href="@PageUrl(Model.CurrentPage - 1)">‹</a>
+                            </li>
 
-                        <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
-                            <a class="page-link" href="@Url.Action("Index", new { searchTerm = Model.SearchTerm, filterActive = Model.FilterActive, filterEngineering = Model.FilterEngineering, sortColumn = Model.SortColumn, sortDirection = Model.SortDirection, page = Model.TotalPages })">»</a>
-                        </li>
+                            @{
+                                int startPage = Math.Max(1, Model.CurrentPage - 2);
+                                int endPage   = Math.Min(Model.TotalPages, startPage + 4);
+                                startPage     = Math.Max(1, endPage - 4);
+                            }
 
-                    </ul>
-                </nav>
+                            @for (int p = startPage; p <= endPage; p++)
+                            {
+                                <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="@PageUrl(p)">@p</a>
+                                </li>
+                            }
+
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@PageUrl(Model.CurrentPage + 1)">›</a>
+                            </li>
+
+                            <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="@PageUrl(Model.TotalPages)">»</a>
+                            </li>
+
+                        </ul>
+                    </nav>
+                }
+
+                <partial name="_PageSizeSelect" model="Model.PageSize" />
             </div>
         }
     </div>
@@ -524,6 +545,12 @@
     document.getElementById('searchInput').addEventListener('input', function () {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => document.getElementById('filterForm').submit(), 500);
+    });
+
+    // ── Rows per page ─────────────────────────────────────────────
+    document.getElementById('pageSizeSelect').addEventListener('change', function () {
+        document.getElementById('pageSizeInput').value = this.value;
+        document.getElementById('filterForm').submit();   // page isn't in the form, so it resets to 1
     });
 </script>
 }

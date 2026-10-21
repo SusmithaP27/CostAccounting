@@ -1,4 +1,5 @@
-﻿using CostAccounting.Models;
+﻿using CostAccounting.Helpers;
+using CostAccounting.Models;
 using CostAccounting.Services.MaterialService;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +23,7 @@ namespace CostAccounting.Controllers
             int page = 1,
             int pageSize = 15)
         {
+            pageSize = PagingDefaults.Normalize(pageSize);
             bool isFirstVisit = !Request.Query.ContainsKey("filterActive")
                               && !Request.Query.ContainsKey("searchTerm")
                               && !Request.Query.ContainsKey("filterTypeId")

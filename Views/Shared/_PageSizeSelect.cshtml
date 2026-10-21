@@ -1,0 +1,12 @@
+@using CostAccounting.Helpers
+@model int
+
+<div class="d-flex align-items-center gap-2">
+    <label for="pageSizeSelect" class="form-label form-label-sm text-muted mb-0 text-nowrap">Rows per page:</label>
+    <select id="pageSizeSelect" class="form-select form-select-sm" style="width:80px;">
+        @foreach (var n in PagingDefaults.PageSizes)
+        {
+            <option value="@n" selected="@(Model == n)">@n</option>
+        }
+    </select>
+</div>

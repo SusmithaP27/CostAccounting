@@ -141,6 +141,10 @@
             </li>
         </ul>
     </nav>
+
+    @* Rows per page. Lives in the partial so it always reflects the PageSize the server used.
+       The change event is handled by a delegated listener on #employeeRateTableContainer (Index.cshtml). *@
+    <partial name="_PageSizeSelect" model="Model.PageSize" />
 </div>
 
 <script>

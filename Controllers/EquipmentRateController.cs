@@ -1,4 +1,5 @@
-﻿using CostAccounting.Models;
+﻿using CostAccounting.Helpers;
+using CostAccounting.Models;
 using CostAccounting.Services.EquipmentRateService;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,8 +24,9 @@ namespace CostAccounting.Controllers
             bool showAllDates = true,
             string? searchTerm = null,
             int page = 1,
-            int pageSize = 25)
+            int pageSize = 15)
         {
+            pageSize = PagingDefaults.Normalize(pageSize);
             var equipmentList = await _service.GetEquipmentListAsync();
 
             // FIX: No more "default to today" fallback. Dates start out fully

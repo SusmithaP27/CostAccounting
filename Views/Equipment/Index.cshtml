@@ -66,7 +66,8 @@
                 <button type="submit" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-funnel me-1"></i>Filter
                 </button>
-                <a href="@Url.Action("Index")" class="btn btn-sm btn-link text-muted text-decoration-none">
+                <a href="@Url.Action("Index", new { pageSize = Model.PageSize })"
+                   class="btn btn-sm btn-link text-muted text-decoration-none">
                     Clear
                 </a>
             </div>
@@ -221,6 +222,7 @@
             let sortCol = '@sortCol';
             let sortDir = '@sortDir';
             let curPage = @Model.CurrentPage;
+            let pageSize = @Model.PageSize;
 
             // ── Helpers ──────────────────────────────────────────────────────────
             const $ = id => document.getElementById(id);
@@ -264,8 +266,8 @@
                 if (active) p.set('filterActive', active);
                 p.set('sortColumn', sortCol);
                 p.set('sortDir',    sortDir);
-                p.set('page',       page);
-                p.set('pageSize',   15);
+                p.set('page',       page);             
+                p.set('pageSize', pageSize);
                 return p.toString();
             }
 
@@ -289,6 +291,18 @@
 
             $('searchTerm')?.addEventListener('keydown', e => {
                 if (e.key === 'Enter') { e.preventDefault(); reloadTable(1); }
+            });
+
+            
+            // ── Rows per page ─────────────────────────────────────────────────
+            // The dropdown lives inside the table partial (re-rendered on every reload), so listen
+            // on the persistent #tableSection instead of the select itself.
+            $('tableSection').addEventListener('change', function (e) {
+                if (e.target && e.target.id === 'pageSizeSelect') {
+                    pageSize = +e.target.value;
+                    $('pageSizeInput').value = pageSize;   // keeps the form's own GET submits in sync
+                    reloadTable(1);
+                }
             });
 
             $('btnClearSearch')?.addEventListener('click', () => {
