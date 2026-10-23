@@ -37,9 +37,14 @@
                 <i class="bi bi-wallet2 text-primary me-2"></i>Accounts
             </h4>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
-            <i class="bi bi-plus-lg me-1"></i> Add New Account
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" id="exportAccountsPdf" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Export to PDF
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add New Account
+            </button>
+        </div>
     </div>
 
     <!-- Search & Filter Toolbar -->
@@ -728,6 +733,12 @@
         document.getElementById('pageSizeSelect').addEventListener('change', function () {
             document.getElementById('pageSizeInput').value = this.value;
             document.getElementById('filterForm').submit();   // page isn't in the form, so it resets to 1
+        });
+        // ── Export PDF (uses whatever is currently in the filter form) ──
+        document.getElementById('exportAccountsPdf').addEventListener('click', function () {
+            const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+            params.delete('pageSize');   // the export is never paged
+            window.location.href = '@Url.Action("ExportPdf", "Account")?' + params.toString();
         });
     </script>
 }

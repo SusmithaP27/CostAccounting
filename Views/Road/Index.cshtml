@@ -35,9 +35,14 @@
         <div>
             <h4 class="mb-0 fw-bold">Roads</h4>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
-            <i class="bi bi-plus-lg me-1"></i> Add New Road
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" id="exportRoadsPdf" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Export to PDF
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add New Road
+            </button>
+        </div>
     </div>
 
     <!-- Search & Filter Toolbar -->
@@ -551,6 +556,12 @@
     document.getElementById('pageSizeSelect').addEventListener('change', function () {
         document.getElementById('pageSizeInput').value = this.value;
         document.getElementById('filterForm').submit();   // page isn't in the form, so it resets to 1
+    });
+    // ── Export PDF (uses whatever is currently in the filter form) ──
+    document.getElementById('exportRoadsPdf').addEventListener('click', function () {
+        const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+        params.delete('pageSize');   // the export is never paged
+        window.location.href = '@Url.Action("ExportPdf", "Road")?' + params.toString();
     });
 </script>
 }

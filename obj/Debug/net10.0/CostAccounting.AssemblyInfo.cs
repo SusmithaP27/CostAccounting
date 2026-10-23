@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CostAccounting")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+1c3205f2443835004e39964265d6b1d24eb084c1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4920d86af296a1d24a342d34101ff50b720534bd")]
 [assembly: System.Reflection.AssemblyProductAttribute("CostAccounting")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CostAccounting")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -1,6 +1,7 @@
 ﻿using CostAccounting.Helpers;
 using CostAccounting.Models;
 using CostAccounting.Services.MaterialService;
+using CostAccounting.Services.Reports;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CostAccounting.Controllers
@@ -8,10 +9,12 @@ namespace CostAccounting.Controllers
     public class MaterialController : Controller
     {
         private readonly IMaterialService _service;
+        private readonly IPdfReportService _pdfReport;
 
-        public MaterialController(IMaterialService service)
+        public MaterialController(IMaterialService service, IPdfReportService pdfReport)
         {
             _service = service;
+            _pdfReport = pdfReport;
         }
 
         public async Task<IActionResult> Index(
@@ -58,6 +61,63 @@ namespace CostAccounting.Controllers
                 return PartialView("_MaterialsTable", vm);
 
             return View(vm);
+        }
+
+        // Same filters and sort as the grid, but no paging (page 1, every row).
+        // Do NOT run PagingDefaults.Normalize on the size here: int.MaxValue is intentional.
+        [HttpGet]
+        public async Task<IActionResult> ExportPdf(
+            string? searchTerm,
+            bool? filterActive,
+            int? filterTypeId,
+            string sortColumn = "Code",
+            string sortDirection = "asc")
+        {
+            
+            var (materials, totalCount) = await _service.GetMaterialsAsync(
+                searchTerm, filterActive, filterTypeId,
+                sortColumn, sortDirection,
+                1, int.MaxValue);
+
+            var vm = new MaterialIndexVM
+                {
+                    Materials = materials,                
+                    SearchTerm = searchTerm,
+                    FilterActive = filterActive,
+                    FilterTypeId = filterTypeId,
+                    CurrentPage = 1,
+                    PageSize = int.MaxValue,
+                    TotalCount = totalCount
+            }   ;
+            string YesNoAll(bool? v) => v == null ? "All" : (v == true ? "Yes" : "No");
+ 
+            var def = new ReportDefinition<MaterialVM>
+            {
+                Title = "Materials Report",
+                RunBy = User.Identity?.Name ?? "",
+                TotalLabel = "Total Materials",
+                Rows = (IReadOnlyList<MaterialVM>)vm.Materials,
+                Parameters =
+                {
+                    ("Active", YesNoAll(filterActive)),
+                    ("Id", filterTypeId?.ToString() ?? ""),
+                    ("Search", string.IsNullOrWhiteSpace(searchTerm) ? "(All)" : searchTerm.Trim())
+                },
+                Columns =
+                {
+                    new() { Header = "Code",         Width = 110,      Value = o => o.Code ?? "" },
+                    new() { Header = "Description",  Relative = 2f,   Value = o => o.Description ?? "" },
+                    new() { Header = "Eff. Date",   Width = 80,      Value = o => o.EffectiveDate?.ToString("MM/dd/yyyy") ?? "" },
+                    new() { Header = "Vendor", Width = 80,      Value = o => o.VendorName ?? ""},
+                    new() { Header = "Contract",       Width = 50,      Value = o => o.Contract  ?? "" },
+                    new() { Header = "Type",         Width = 70,      Value = o => o.Unit ?? ""  },
+                    new() { Header = "Rate",         Width = 70,      Value = o => o.Rate.ToString() ?? ""  },
+                    new() { Header = "Active",       Width = 50,      Value = o => o.Active == true ? "Yes" : "No" }
+                }
+            };
+ 
+            return File(_pdfReport.Build(def), "application/pdf",
+                $"MaterialsReport_{DateTime.Now:yyyyMMdd_HHmm}.pdf");
         }
 
         [HttpPost]

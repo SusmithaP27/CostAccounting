@@ -37,9 +37,14 @@
         <h4 class="mb-0 fw-bold">
             <i class="bi bi-cash-coin text-primary me-2"></i>Paycodes
         </h4>
-        <button class="btn btn-primary btn-sm" onclick="openAddModal()">
-            <i class="bi bi-plus-lg me-1"></i> Add New Paycode
-        </button>
+        <div class="d-flex gap-2">
+            <button type="button" id="exportPaycodesPdf" class="btn btn-outline-danger btn-sm">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Export to PDF
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">
+                <i class="bi bi-plus-lg me-1"></i> Add New Paycode
+            </button>
+        </div>
     </div>
 
     <!-- Search & Filter Toolbar -->
@@ -580,6 +585,12 @@
     $('pageSizeSelect').addEventListener('change', function () {
         $('pageSizeInput').value = this.value;
         $('filterForm').submit();   // currentPage isn't in the form, so it resets to 1
+    });
+    // ── Export PDF (uses whatever is currently in the filter form) ──
+    document.getElementById('exportPaycodesPdf').addEventListener('click', function () {
+        const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+        params.delete('pageSize');   // the export is never paged
+        window.location.href = '@Url.Action("ExportPdf", "Paycode")?' + params.toString();
     });
 </script>
 }

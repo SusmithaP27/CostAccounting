@@ -14,9 +14,15 @@
             @Model.TotalCount record@(Model.TotalCount != 1 ? "s" : "")
         </p>
     </div>
+    <div class="d-flex gap-2">
+    <button type="button" id="exportEquipmentsPdf" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Export to PDF
+    </button>
     <button class="btn btn-primary btn-sm" id="btnOpenAdd">
         <i class="bi bi-plus-lg me-1"></i>Add Equipment
     </button>
+</div>
+    
 </div>
 
 <div class="card border-0 shadow-sm mb-3">
@@ -480,8 +486,15 @@
                     $('btnSaveAdd').click();
                 }
             });
+            // ── Export PDF (uses whatever is currently in the filter form) ──
+document.getElementById('exportEquipmentsPdf').addEventListener('click', function () {
+    const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+    params.delete('pageSize');   // the export is never paged
+    window.location.href = '@Url.Action("ExportPdf", "Equipment")?' + params.toString();
+});
 
             bindTableEvents();
+
 
         })();
     </script>

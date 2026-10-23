@@ -148,16 +148,19 @@ using CostAccounting.Models;
 using CostAccounting.Services.EquipmentService;
 using Microsoft.AspNetCore.Mvc;
 using CostAccounting.Helpers;
+using CostAccounting.Services.Reports;
 
 namespace CostAccounting.Controllers
 {
     public class EquipmentController : Controller
     {
         private readonly IEquipmentService _service;
+        private readonly IPdfReportService _pdfReport;
 
-        public EquipmentController(IEquipmentService service)
+        public EquipmentController(IEquipmentService service, IPdfReportService pdfReport)
         {
             _service = service;
+            _pdfReport = pdfReport;
         }
 
         public async Task<IActionResult> Index(
@@ -192,6 +195,64 @@ namespace CostAccounting.Controllers
                 return PartialView("_EquipmentsTable", vm);
 
             return View(vm);
+        }
+
+        // Same filters and sort as the grid, but no paging (page 1, every row).
+        // Do NOT run PagingDefaults.Normalize on the size here: int.MaxValue is intentional.
+        [HttpGet]
+        public async Task<IActionResult> ExportPdf(
+            string? searchTerm,
+            bool? filterActive,
+            int? filterTypeId,
+            string sortColumn = "Code",
+            string sortDirection = "asc")
+        {
+            
+            var (equipments, totalCount) = await _service.GetEquipmentsAsync(
+                searchTerm, filterActive, filterTypeId,
+                sortColumn, sortDirection,
+                1, int.MaxValue);
+
+            var vm = new EquipmentIndexVM
+            {
+                Equipments = equipments,
+                SearchTerm = searchTerm,
+                FilterActive = filterActive,
+                FilterTypeId = filterTypeId,
+                CurrentPage = 1,
+                PageSize = int.MaxValue,
+                TotalCount = totalCount
+            };
+            string YesNoAll(bool? v) => v == null ? "All" : (v == true ? "Yes" : "No");
+ 
+            var def = new ReportDefinition<EquipmentVM>
+            {
+                Title = "Equipments Report",
+                RunBy = User.Identity?.Name ?? "",
+                TotalLabel = "Total Equipments",
+                Rows = (IReadOnlyList<EquipmentVM>)vm.Equipments,
+                Parameters =
+                {
+                    ("Active", YesNoAll(filterActive)),
+                    ("Id", filterTypeId?.ToString() ?? ""),
+                    ("Search", string.IsNullOrWhiteSpace(searchTerm) ? "(All)" : searchTerm.Trim())
+                },
+                Columns =
+                {
+                    new() { Header = "Code",         Width = 110,      Value = o => o.Code ?? "" },
+                    new() { Header = "Category",  Relative = 2f,   Value = o => o.Category ?? "" },
+                    new() { Header = "Mfg Year",   Width = 80,      Value = o => o.MfgYear?.ToString() ?? "" },
+                    new() { Header = "Date In Service", Width = 80,      Value = o => o.DateInService?.ToString("MM/dd/yyyy") ?? ""},
+                    new() { Header = "Make",       Width = 50,      Value = o => o.Make  ?? "" },
+                    new() { Header = "Model",         Width = 70,      Value = o => o.EquipmentModel ?? ""  },
+                    new() { Header = "Department",         Width = 70,      Value = o => o.Department ?? ""  },
+                    new() { Header = "Current Rate",       Width = 50,      Value = o => o.CurrentRate?.ToString() ?? "" },
+                    new() { Header = "Active",       Width = 50,      Value = o => o.Active == true ? "Yes" : "No" }
+                }
+            };
+ 
+            return File(_pdfReport.Build(def), "application/pdf",
+                $"EquipmentsReport_{DateTime.Now:yyyyMMdd_HHmm}.pdf");
         }
 
         [HttpPost]

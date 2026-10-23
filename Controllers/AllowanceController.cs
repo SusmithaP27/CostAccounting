@@ -1,16 +1,21 @@
 ﻿using CostAccounting.Services;
 using Microsoft.AspNetCore.Mvc;
 using CostAccounting.Helpers;
+using CostAccounting.Services.Reports;
+using CostAccounting.Models;
+using CostAccounting.Models.ViewModels;
 
 namespace CostAccounting.Controllers
 {
     public class AllowanceController : Controller
     {
         private readonly IAllowanceService _allowanceService;
+        private readonly IPdfReportService _pdfReport;
 
-        public AllowanceController(IAllowanceService allowanceService)
+        public AllowanceController(IAllowanceService allowanceService, IPdfReportService pdfReport)
         {
             _allowanceService = allowanceService;
+            _pdfReport = pdfReport;
         }
 
         public async Task<IActionResult> Index(
@@ -32,6 +37,46 @@ namespace CostAccounting.Controllers
                 filterYear, filterActive, filterSubTypeId, sortColumn, sortDirection, page, pageSize);
 
             return View(vm);
+        }
+        // GET: /Allowance/ExportPdf
+        // Same filters and sort as the grid, but no paging (page 1, every row).
+        // Do NOT run PagingDefaults.Normalize on the size here: int.MaxValue is intentional.
+        [HttpGet]
+        public async Task<IActionResult> ExportPdf(
+            int? filterYear,
+            bool? filterActive,
+            int? filterSubTypeId,
+            string sortColumn = "Code",
+            string sortDirection = "asc")
+        {
+            var vm = await _allowanceService.GetAllowancesAsync(
+                filterYear, filterActive, filterSubTypeId, sortColumn, sortDirection, 1, int.MaxValue);
+ 
+            string YesNoAll(bool? v) => v == null ? "All" : (v == true ? "Yes" : "No");
+ 
+            var def = new ReportDefinition<AllowanceVM>
+            {
+                Title = "Allowance Report",
+                RunBy = User.Identity?.Name ?? "",
+                TotalLabel = "Total Allowances",
+                Rows = vm.Allowances,
+                Parameters =
+                {
+                    ("Active", YesNoAll(filterActive)),
+                    ("Year", filterYear?.ToString() ?? ""),
+                    ("SubTypeId",filterSubTypeId?.ToString() ?? "")
+                    
+                },
+                Columns =
+                {
+                    new() { Header = "Year",         Width = 80,      Value = o => o.Year?.ToString() ?? "" },
+                    new() { Header = "County Benefit",  Relative = 3f,   Value = o => o.Rate?.ToString() ?? "" },
+                    new() { Header = "Type",   Width = 100,     Value = o => o.SubTypeName ?? "" }
+                }
+            };
+ 
+            return File(_pdfReport.Build(def), "application/pdf",
+                $"AllowancesReport_{DateTime.Now:yyyyMMdd_HHmm}.pdf");
         }
 
         [HttpPost]

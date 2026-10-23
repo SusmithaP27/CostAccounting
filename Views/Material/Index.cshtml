@@ -12,9 +12,14 @@
     <div>
         <h4 class="mb-0 fw-semibold">Materials</h4>
     </div>
-    <button class="btn btn-primary btn-sm" id="btnOpenAdd">
-        <i class="bi bi-plus-lg me-1"></i>Add Material
-    </button>
+    <div class="d-flex gap-2">
+        <button type="button" id="exportMaterialsPdf" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i> Export to PDF
+        </button>
+        <button class="btn btn-primary btn-sm" id="btnOpenAdd">
+            <i class="bi bi-plus-lg me-1"></i>Add Material
+        </button>
+    </div>
 </div>
 
 <!-- Search & Filter Toolbar -->
@@ -585,6 +590,12 @@
     });
 
     bindTableEvents();
+    // ── Export PDF (uses whatever is currently in the filter form) ──
+    document.getElementById('exportMaterialsPdf').addEventListener('click', function () {
+        const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+        params.delete('pageSize');   // the export is never paged
+        window.location.href = '@Url.Action("ExportPdf", "Material")?' + params.toString();
+    });
 
 })();
 </script>
