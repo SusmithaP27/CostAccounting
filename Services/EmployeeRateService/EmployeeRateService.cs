@@ -171,9 +171,16 @@ namespace CostAccounting.Services.EmployeeRateService
         // 0.99, not 1.00 — which matches "goes up 10% ... goes back down 10%" as written
         // rather than assuming they must net out to the original number).
         public async Task<(bool Success, string Message)> ApplySeasonalAdjustmentAsync(
-            bool isIncrease, DateTime effectiveDate, List<int> employeeObjectIds, string enteredByUser)
-        {
-            var multiplier = isIncrease ? 1.10m : 0.90m;
+    bool isIncrease, DateTime effectiveDate, List<int> employeeObjectIds,
+    bool selectedOnly, decimal percent, string enteredByUser)
+{
+    if (percent <= 0 || percent > 100 || (!isIncrease && percent >= 100))
+        return (false, "Percentage must be greater than 0 (and less than 100 for a decrease).");
+
+    if (selectedOnly && (employeeObjectIds == null || !employeeObjectIds.Any()))
+        return (false, "No employees were selected.");
+
+    var multiplier = isIncrease ? 1m + percent / 100m : 1m - percent / 100m;
 
             // Same anti-Contains() workaround as BulkEndDateAsync: fetch everything currently
             // active/current in one shot, then filter to the target employee set in memory
@@ -183,9 +190,7 @@ namespace CostAccounting.Services.EmployeeRateService
                 .Include(er => er.Employee)
                 .ToListAsync();
 
-            var targetSet = employeeObjectIds != null && employeeObjectIds.Any()
-                ? new HashSet<int>(employeeObjectIds)
-                : null; // null means "everyone active with a current rate"
+            var targetSet = selectedOnly ? new HashSet<int>(employeeObjectIds) : null; // null means "everyone active with a current rate"
 
             var currentRatesByEmployee = allCurrentRates
                 .Where(er => !er.Employee.Deleted && er.Employee.Active)
@@ -224,7 +229,7 @@ namespace CostAccounting.Services.EmployeeRateService
 
             await _context.SaveChangesAsync();
             var direction = isIncrease ? "increased" : "decreased";
-            return (true, $"Rates {direction} 10% for {currentRatesByEmployee.Count} employee(s), effective {effectiveDate:MM/dd/yyyy}.");
+            return (true, $"Rates {direction} {percent:0.##}% for {currentRatesByEmployee.Count} employee(s), effective {effectiveDate:MM/dd/yyyy}.");
         }
     }
 }

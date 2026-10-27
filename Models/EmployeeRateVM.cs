@@ -51,9 +51,11 @@ namespace CostAccounting.Models
     // Payload for the seasonal +/-10% adjustment. EmployeeObjectIds empty/omitted means
     // "apply to every active employee with a current rate."
     public class SeasonalAdjustmentRequest
-    {
-        public bool IsIncrease { get; set; }
-        public DateTime EffectiveDate { get; set; }
-        public List<int> EmployeeObjectIds { get; set; }
-    }
+{
+    public bool IsIncrease { get; set; }
+    public DateTime EffectiveDate { get; set; }
+    public decimal Percent { get; set; } = 10m;   // 10 = standard, otherwise custom
+    public bool SelectedOnly { get; set; }        // true = only EmployeeObjectIds, never "everyone"
+    public List<int> EmployeeObjectIds { get; set; }
+}
 }

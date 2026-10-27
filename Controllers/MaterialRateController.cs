@@ -1,6 +1,7 @@
 ﻿using CostAccounting.Helpers;
 using CostAccounting.Models;
 using CostAccounting.Services.MaterialRateService;
+using CostAccounting.Services.Reports;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CostAccounting.Controllers
@@ -8,11 +9,17 @@ namespace CostAccounting.Controllers
     public class MaterialRateController : Controller
     {
         private readonly IMaterialRateService _svc;
+        private readonly IPdfReportService _pdfReport;
 
-        public MaterialRateController(IMaterialRateService svc) => _svc = svc;
+        public MaterialRateController(IMaterialRateService svc, IPdfReportService pdfReport)
+        {
+            _svc = svc;
+            _pdfReport = pdfReport;
+
+        }
 
         [HttpGet]
-public async Task<IActionResult> Index(
+        public async Task<IActionResult> Index(
     int? filterMaterialId,
     bool showAllMaterials = true,
     string? startDateOperator = "<=",
@@ -25,51 +32,51 @@ public async Task<IActionResult> Index(
     string sortDir = "asc",
     int page = 1,
     int pageSize = 15)
-{
-    bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
-    if (page < 1) page = 1;
-    pageSize = PagingDefaults.Normalize(pageSize);
-    var (items, total) = await _svc.GetRatesAsync(
-        filterMaterialId, showAllMaterials,
-        startDateOperator, startDateFilter,
-        endDateOperator, endDateFilter,
-        showAllDates, searchTerm,
-        sortColumn, sortDir, page, pageSize);
+        {
+            bool isAjax = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+            if (page < 1) page = 1;
+            pageSize = PagingDefaults.Normalize(pageSize);
+            var (items, total) = await _svc.GetRatesAsync(
+                filterMaterialId, showAllMaterials,
+                startDateOperator, startDateFilter,
+                endDateOperator, endDateFilter,
+                showAllDates, searchTerm,
+                sortColumn, sortDir, page, pageSize);
 
-    // Rows were deleted and this page is now past the end: step back
-    int totalPages = (int)Math.Ceiling(total / (double)pageSize);
-    if (total > 0 && page > totalPages)
-    {
-        page = totalPages;
-        (items, total) = await _svc.GetRatesAsync(
-            filterMaterialId, showAllMaterials,
-            startDateOperator, startDateFilter,
-            endDateOperator, endDateFilter,
-            showAllDates, searchTerm,
-            sortColumn, sortDir, page, pageSize);
-    }
+            // Rows were deleted and this page is now past the end: step back
+            int totalPages = (int)Math.Ceiling(total / (double)pageSize);
+            if (total > 0 && page > totalPages)
+            {
+                page = totalPages;
+                (items, total) = await _svc.GetRatesAsync(
+                    filterMaterialId, showAllMaterials,
+                    startDateOperator, startDateFilter,
+                    endDateOperator, endDateFilter,
+                    showAllDates, searchTerm,
+                    sortColumn, sortDir, page, pageSize);
+            }
 
-    var vm = new MaterialRateIndexVM
-    {
-        Rates = items,
-        Materials = await _svc.GetMaterialsAsync(),
-        FilterMaterialId = filterMaterialId,
-        ShowAllMaterials = showAllMaterials,
-        StartDateOperator = startDateOperator,
-        StartDateFilter = startDateFilter,
-        EndDateOperator = endDateOperator,
-        EndDateFilter = endDateFilter,
-        ShowAllDates = showAllDates,
-        SearchTerm = searchTerm,
-        SortColumn = sortColumn,
-        SortDir = sortDir,
-        CurrentPage = page,
-        PageSize = pageSize,
-        TotalCount = total
-    };
+            var vm = new MaterialRateIndexVM
+            {
+                Rates = items,
+                Materials = await _svc.GetMaterialsAsync(),
+                FilterMaterialId = filterMaterialId,
+                ShowAllMaterials = showAllMaterials,
+                StartDateOperator = startDateOperator,
+                StartDateFilter = startDateFilter,
+                EndDateOperator = endDateOperator,
+                EndDateFilter = endDateFilter,
+                ShowAllDates = showAllDates,
+                SearchTerm = searchTerm,
+                SortColumn = sortColumn,
+                SortDir = sortDir,
+                CurrentPage = page,
+                PageSize = pageSize,
+                TotalCount = total
+            };
 
-    return isAjax ? PartialView("_RatesTable", vm) : View(vm);
-}
+            return isAjax ? PartialView("_RatesTable", vm) : View(vm);
+        }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(int materialObjectId, DateTime? startDate, DateTime? endDate, decimal rate)
@@ -118,5 +125,81 @@ public async Task<IActionResult> Index(
                        .Select(s => int.TryParse(s, out var i) ? i : 0)
                        .Where(i => i > 0)
                        .ToList();
+
+        [HttpGet]
+        public async Task<IActionResult> ExportPdf(
+        int? filterMaterialId,
+        bool showAllMaterials = true,
+        string? startDateOperator = "<=",
+        DateTime? startDateFilter = null,
+        string? endDateOperator = ">=",
+        DateTime? endDateFilter = null,
+        bool showAllDates = true,
+        string? searchTerm = null,
+        string sortColumn = "MaterialCode",
+        string sortDir = "asc",
+        string? selectedIds = null)
+        {
+            // Same filters and sort as the grid, but no paging.
+            var (items, _) = await _svc.GetRatesAsync(
+                filterMaterialId, showAllMaterials,
+                startDateOperator, startDateFilter,
+                endDateOperator, endDateFilter,
+                showAllDates, searchTerm,
+                sortColumn, sortDir, 1, int.MaxValue);
+
+            var rows = items.ToList();
+
+            var ids = ParseIds(selectedIds);
+            var hasSelection = ids.Any();
+            if (hasSelection)
+            {
+                var set = new HashSet<int>(ids);
+                rows = rows.Where(r => set.Contains(r.ObjectID)).ToList();
+            }
+
+            string materialText = "All materials";
+            if (!showAllMaterials && filterMaterialId.HasValue)
+            {
+                var mats = await _svc.GetMaterialsAsync();
+                var m = mats.FirstOrDefault(x => x.ObjectID == filterMaterialId.Value);
+                if (m != null) materialText = $"{m.Code} — {m.Description}";
+            }
+
+            string datesText = "All dates";
+            if (!showAllDates)
+            {
+                var parts = new List<string>();
+                if (startDateFilter.HasValue) parts.Add($"Start {startDateOperator} {startDateFilter:MM/dd/yyyy}");
+                if (endDateFilter.HasValue) parts.Add($"End {endDateOperator} {endDateFilter:MM/dd/yyyy}");
+                datesText = parts.Any() ? string.Join(" and ", parts) : "All dates";
+            }
+
+            var def = new ReportDefinition<MaterialRateVM>
+            {
+                Title = "Material Rate Report",
+                RunBy = User.Identity?.Name ?? "",
+                TotalLabel = "Total Rates",
+                Rows = rows,
+                Parameters =
+        {
+            ("Rows", hasSelection ? "Selected rows only" : "All matching rows"),
+            ("Material", materialText),
+            ("Dates", datesText),
+            ("Search", string.IsNullOrWhiteSpace(searchTerm) ? "(All)" : searchTerm.Trim())
+        },
+                Columns =
+        {
+            new() { Header = "Code",        Width = 70,      Value = r => r.MaterialCode },
+            new() { Header = "Description", Relative = 3f,   Value = r => r.MaterialDescription ?? "" },
+            new() { Header = "Start Date",  Width = 70,      Value = r => r.StartDate?.ToString("MM/dd/yyyy") ?? "" },
+            new() { Header = "End Date",    Width = 70,      Value = r => r.EndDate?.ToString("MM/dd/yyyy") ?? "" },
+            new() { Header = "Rate",        Width = 70,      AlignRight = true, Value = r => r.Rate.ToString("N4") }
+        }
+            };
+
+            return File(_pdfReport.Build(def), "application/pdf",
+                $"MaterialRateReport_{DateTime.Now:yyyyMMdd_HHmm}.pdf");
+        }
     }
 }

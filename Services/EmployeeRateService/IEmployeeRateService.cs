@@ -13,6 +13,7 @@ namespace CostAccounting.Services.EmployeeRateService
         Task<(bool Success, string Message)> BulkEndDateAsync(List<int> objectIds, System.DateTime endDate);
 
         Task<(bool Success, string Message)> ApplySeasonalAdjustmentAsync(
-            bool isIncrease, System.DateTime effectiveDate, List<int> employeeObjectIds, string enteredByUser);
+    bool isIncrease, DateTime effectiveDate, List<int> employeeObjectIds,
+    bool selectedOnly, decimal percent, string enteredByUser);
     }
 }

@@ -14,6 +14,9 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">Employee Rates</h3>
     <div>
+        <button type="button" class="btn btn-outline-danger" id="exportPdfBtn">
+            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+        </button>
         <button type="button" class="btn btn-outline-secondary" id="bulkEndDateBtn" disabled>
             <i class="bi bi-calendar-x"></i> Bulk End-Date
         </button>
@@ -126,17 +129,28 @@
             </div>
             <div class="modal-body">
                 <p class="text-muted small">
-                    Rates go up 10% on the first Sunday after Thanksgiving, and back down 10%
-                    on the last Saturday in March. This ends each affected employee's current
-                    rate the day before the effective date and starts a new rate at the
-                    adjusted amount.
+                    Standard: rates go up 10% on the first Sunday after Thanksgiving and back down 10%
+                    on the last Saturday in March. Choose "Custom" to use a different percentage. This ends
+                    each affected employee's current rate the day before the effective date and starts a
+                    new rate at the adjusted amount.
                 </p>
                 <div class="mb-3">
                     <label class="form-label">Direction</label>
                     <select id="seasonalDirection" class="form-select">
-                        <option value="increase">Increase 10% (post-Thanksgiving)</option>
-                        <option value="decrease">Decrease 10% (end of March)</option>
+                        <option value="increase">Increase</option>
+                        <option value="decrease">Decrease</option>
                     </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount</label>
+                    <select id="seasonalAmountMode" class="form-select">
+                        <option value="standard">Standard (10%)</option>
+                        <option value="custom">Custom percentage</option>
+                    </select>
+                    <div class="input-group mt-2 d-none" id="seasonalCustomGroup">
+                        <input type="number" id="seasonalCustomPercent" class="form-control" min="0.01" max="100" step="0.01" placeholder="e.g. 5" />
+                        <span class="input-group-text">%</span>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Effective Date</label>
@@ -224,9 +238,9 @@
     }
     window.showEmployeeRateToast = showToast;
 
-    // The Update/Delete/BulkEndDate actions are [ValidateAntiForgeryToken], but their POSTs
-    // are built by hand (not via FormData on the Add Rate <form>), so the token has to be
-    // pulled from the hidden field the Add Rate form renders and attached explicitly —
+    // The Update/Delete/BulkEndDate/ApplySeasonalAdjustment actions are [ValidateAntiForgeryToken],
+    // but their POSTs are built by hand (not via FormData on the Add Rate <form>), so the token has
+    // to be pulled from the hidden field the Add Rate form renders and attached explicitly —
     // otherwise every one of those calls 400s.
     window.getEmployeeRateAntiForgeryToken = function () {
         const tokenInput = document.querySelector('#addEmployeeRateForm input[name="__RequestVerificationToken"]');
@@ -302,9 +316,15 @@
 
     function updateBulkButtonState() {
         const checked = document.querySelectorAll('.rate-row-check:checked');
-        const btn = document.getElementById('bulkEndDateBtn');
-        btn.disabled = checked.length === 0;
-        btn.textContent = checked.length > 0 ? `Bulk End-Date (${checked.length})` : 'Bulk End-Date';
+
+        const bulkBtn = document.getElementById('bulkEndDateBtn');
+        bulkBtn.disabled = checked.length === 0;
+        bulkBtn.innerHTML = '<i class="bi bi-calendar-x"></i> ' +
+            (checked.length > 0 ? `Bulk End-Date (${checked.length})` : 'Bulk End-Date');
+
+        document.getElementById('exportPdfBtn').innerHTML =
+            '<i class="bi bi-file-earmark-pdf"></i> ' +
+            (checked.length > 0 ? `Export PDF (${checked.length} selected)` : 'Export PDF');
     }
 
     // One delegated 'change' listener for everything inside the (re-rendered) table container:
@@ -349,6 +369,17 @@
         });
     });
 
+    // Export PDF: same filters/sort as the grid. If rows are checked, only those are exported;
+    // otherwise everything matching the current filters (all pages) is exported.
+    document.getElementById('exportPdfBtn').addEventListener('click', function () {
+        const params = buildParams(1);
+        params.delete('Page');
+        params.delete('PageSize');
+        document.querySelectorAll('.rate-row-check:checked')
+            .forEach(cb => params.append('selectedIds', cb.dataset.id));
+        window.location.href = '/EmployeeRate/ExportPdf?' + params.toString();
+    });
+
     document.getElementById('bulkEndDateBtn').addEventListener('click', function () {
         const checked = document.querySelectorAll('.rate-row-check:checked');
         document.getElementById('bulkEndDateCount').textContent = checked.length;
@@ -378,9 +409,29 @@
         });
     });
 
-    // Seasonal adjustment: pull the computed dates from the server (SeasonalRateHelper) each
-    // time the modal opens, and default the direction/date to whichever is coming up next.
+    // ---- Seasonal adjustment -------------------------------------------------------------
+
+    // Show / hide the custom percentage box
+    document.getElementById('seasonalAmountMode').addEventListener('change', function () {
+        document.getElementById('seasonalCustomGroup').classList.toggle('d-none', this.value !== 'custom');
+    });
+
+    // Each time the modal opens: reflect what's checked in the grid, reset the amount to the
+    // standard 10%, and pull the computed dates from the server (SeasonalRateHelper), defaulting
+    // the direction/date to whichever is coming up next.
     document.getElementById('seasonalAdjustmentModal').addEventListener('show.bs.modal', function () {
+        const checkedCount = document.querySelectorAll('.rate-row-check:checked').length;
+        const scopeSel = document.getElementById('seasonalScope');
+        scopeSel.querySelector('option[value="selected"]').textContent =
+            checkedCount > 0
+                ? `Only the ${checkedCount} row(s) currently checked in the grid`
+                : 'Only the rows currently checked in the grid (none checked)';
+        scopeSel.value = checkedCount > 0 ? 'selected' : 'all';
+
+        document.getElementById('seasonalAmountMode').value = 'standard';
+        document.getElementById('seasonalCustomGroup').classList.add('d-none');
+        document.getElementById('seasonalCustomPercent').value = '';
+
         fetch('/EmployeeRate/GetSeasonalDates')
             .then(r => r.json())
             .then(res => {
@@ -397,24 +448,37 @@
         const scope = document.getElementById('seasonalScope').value;
         if (!effectiveDate) return;
 
+        let percent = 10;
+        if (document.getElementById('seasonalAmountMode').value === 'custom') {
+            percent = parseFloat(document.getElementById('seasonalCustomPercent').value);
+            if (!(percent > 0) || percent > 100 || (!isIncrease && percent >= 100)) {
+                showToast('Enter a valid custom percentage (greater than 0, and under 100 for a decrease).', false);
+                return;
+            }
+        }
+
         const params = new URLSearchParams();
         params.set('IsIncrease', isIncrease);
         params.set('EffectiveDate', effectiveDate);
+        params.set('Percent', percent);
+        params.set('SelectedOnly', scope === 'selected');
         params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
 
         if (scope === 'selected') {
-            const ids = Array.from(document.querySelectorAll('.rate-row-check:checked')).map(cb => cb.dataset.id);
-            if (ids.length === 0) {
+            // These are EmployeeRate ObjectIDs on the grid; the endpoint expects the
+            // *employee* IDs, so resolve each checked rate row back to its employee
+            // (a Set de-duplicates employees with more than one checked row).
+            const empIds = new Set();
+            document.querySelectorAll('.rate-row-check:checked').forEach(cb => {
+                const row = document.querySelector(`tr[data-id="${cb.dataset.id}"]`);
+                const empId = row?.querySelector('.cell-input-always')?.value;
+                if (empId) empIds.add(empId);
+            });
+            if (empIds.size === 0) {
                 showToast('No rows are checked in the grid — switch "Apply To" to all employees, or check some rows first.', false);
                 return;
             }
-            // These are EmployeeRate ObjectIDs on the grid; the endpoint expects the
-            // *employee* IDs, so resolve each checked rate row back to its employee.
-            ids.forEach(rateId => {
-                const row = document.querySelector(`tr[data-id="${rateId}"]`);
-                const empId = row?.querySelector('.cell-input-always')?.value;
-                if (empId) params.append('EmployeeObjectIds', empId);
-            });
+            empIds.forEach(id => params.append('EmployeeObjectIds', id));
         }
 
         fetch('/EmployeeRate/ApplySeasonalAdjustment', {
