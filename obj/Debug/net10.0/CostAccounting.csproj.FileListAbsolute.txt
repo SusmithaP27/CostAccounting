@@ -262,7 +262,6 @@ C:\Applications Build\CostAccounting\obj\Debug\net10.0\rjsmcshtml.dswa.cache.jso
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\scopedcss\Views\Shared\_Layout.cshtml.rz.scp.css
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\scopedcss\bundle\CostAccounting.styles.css
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\scopedcss\projectbundle\CostAccounting.bundle.scp.css
-C:\Applications Build\CostAccounting\obj\Debug\net10.0\compressed\tzsr9v14kr-{0}-b9sayid5wm-b9sayid5wm.gz
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\compressed\kato63akzq-{0}-61n19gt1b8-61n19gt1b8.gz
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\compressed\65bl30imr4-{0}-xtxxf3hu2r-xtxxf3hu2r.gz
 C:\Applications Build\CostAccounting\obj\Debug\net10.0\compressed\ghmkb7nj10-{0}-bqjiyaj88i-bqjiyaj88i.gz
@@ -366,3 +365,4 @@ C:\Applications Build\CostAccounting\bin\Debug\net10.0\runtimes\win-x64\native\Q
 C:\Applications Build\CostAccounting\bin\Debug\net10.0\runtimes\win-x64\native\qpdf.dll
 C:\Applications Build\CostAccounting\bin\Debug\net10.0\runtimes\win-x86\native\QuestPdfSkia.dll
 C:\Applications Build\CostAccounting\bin\Debug\net10.0\runtimes\win-x86\native\qpdf.dll
+C:\Applications Build\CostAccounting\obj\Debug\net10.0\compressed\tzsr9v14kr-{0}-b9sayid5wm-b9sayid5wm.gz

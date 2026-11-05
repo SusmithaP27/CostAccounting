@@ -1,46 +1,56 @@
 using System;
 
-namespace CostAccounting.Services
+namespace CostAccounting.Helpers
 {
-    // Two fixed annual dates that drive the seasonal rate adjustment:
-    //   - Rates go UP 10% on the first Sunday after Thanksgiving
-    //   - Rates go back DOWN 10% on the last Saturday in March
     public static class SeasonalRateHelper
     {
-        public static DateTime GetFirstSundayAfterThanksgiving(int year)
+        // Thanksgiving = 4th Thursday of November. The Sunday after it is Thanksgiving + 3 days.
+        public static DateTime FirstSundayAfterThanksgiving(int year)
         {
-            // Thanksgiving = 4th Thursday of November
-            var nov1 = new DateTime(year, 11, 1);
-            int daysUntilFirstThursday = ((int)DayOfWeek.Thursday - (int)nov1.DayOfWeek + 7) % 7;
-            var firstThursday = nov1.AddDays(daysUntilFirstThursday);
-            var thanksgiving = firstThursday.AddDays(21); // 4th Thursday
-
-            // Thursday -> following Sunday is always +3 days
-            return thanksgiving.AddDays(3);
+            var d = new DateTime(year, 11, 1);
+            while (d.DayOfWeek != DayOfWeek.Thursday) d = d.AddDays(1); // 1st Thursday
+            return d.AddDays(21 + 3);                                   // 4th Thursday + 3 = Sunday
         }
 
-        public static DateTime GetLastSaturdayInMarch(int year)
+        public static DateTime LastSaturdayInMarch(int year)
         {
-            var mar31 = new DateTime(year, 3, 31);
-            int diff = ((int)mar31.DayOfWeek - (int)DayOfWeek.Saturday + 7) % 7;
-            return mar31.AddDays(-diff);
+            var d = new DateTime(year, 3, 31);
+            while (d.DayOfWeek != DayOfWeek.Saturday) d = d.AddDays(-1);
+            return d;
         }
 
-        // Whichever of the two seasonal dates comes next from "today" (used to pre-fill the
-        // Apply Seasonal Adjustment modal with a sensible default).
-        public static (DateTime IncreaseDate, DateTime DecreaseDate, bool NextIsIncrease, DateTime NextDate) GetUpcoming(DateTime today)
+        // Next occurrence of each date (today counts), and which one comes first.
+        public static (DateTime IncreaseDate, DateTime DecreaseDate, bool NextIsIncrease, DateTime NextDate)
+            GetUpcoming(DateTime today)
         {
-            var increaseThisYear = GetFirstSundayAfterThanksgiving(today.Year);
-            var decreaseThisYear = GetLastSaturdayInMarch(today.Year);
+            today = today.Date;
 
-            // Build the next occurrence of each, rolling to next year if this year's has passed.
-            var nextIncrease = increaseThisYear >= today.Date ? increaseThisYear : GetFirstSundayAfterThanksgiving(today.Year + 1);
-            var nextDecrease = decreaseThisYear >= today.Date ? decreaseThisYear : GetLastSaturdayInMarch(today.Year + 1);
+            var increase = FirstSundayAfterThanksgiving(today.Year);
+            if (increase < today) increase = FirstSundayAfterThanksgiving(today.Year + 1);
 
-            bool nextIsIncrease = nextIncrease <= nextDecrease;
-            var nextDate = nextIsIncrease ? nextIncrease : nextDecrease;
+            var decrease = LastSaturdayInMarch(today.Year);
+            if (decrease < today) decrease = LastSaturdayInMarch(today.Year + 1);
 
-            return (nextIncrease, nextDecrease, nextIsIncrease, nextDate);
+            var nextIsIncrease = increase <= decrease;
+            return (increase, decrease, nextIsIncrease, nextIsIncrease ? increase : decrease);
+        }
+
+        // Increase period: first Sunday after Thanksgiving -> day before the last Saturday in March
+        public static (DateTime Start, DateTime End) GetIncreasePeriod(DateTime today)
+        {
+            today = today.Date;
+            var start = FirstSundayAfterThanksgiving(today.Year);
+            if (start < today) start = FirstSundayAfterThanksgiving(today.Year + 1);
+            return (start, LastSaturdayInMarch(start.Year + 1).AddDays(-1));
+        }
+
+        // Decrease period: last Saturday in March -> day before the first Sunday after Thanksgiving
+        public static (DateTime Start, DateTime End) GetDecreasePeriod(DateTime today)
+        {
+            today = today.Date;
+            var start = LastSaturdayInMarch(today.Year);
+            if (start < today) start = LastSaturdayInMarch(today.Year + 1);
+            return (start, FirstSundayAfterThanksgiving(start.Year).AddDays(-1));
         }
     }
 }

@@ -20,8 +20,9 @@
         <button type="button" class="btn btn-outline-secondary" id="bulkEndDateBtn" disabled>
             <i class="bi bi-calendar-x"></i> Bulk End-Date
         </button>
-        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#seasonalAdjustmentModal">
-            <i class="bi bi-graph-up-arrow"></i> Apply Seasonal Adjustment
+        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal"
+                data-bs-target="#seasonalAdjustmentModal">
+            <i class="bi bi-graph-up-arrow"></i> Apply Adjustment
         </button>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeRateModal">
             <i class="bi bi-plus-lg"></i> Add Rate
@@ -35,28 +36,39 @@
             <div class="col-12 col-lg-4">
                 <label class="form-label">Search</label>
                 <div class="position-relative">
-                    <input type="text" id="searchTerm" class="form-control" placeholder="Employee name or code..." value="@Model.SearchTerm" />
-                    <button type="button" id="clearSearch" class="btn-close position-absolute top-50 end-0 translate-middle-y me-2 d-none" aria-label="Clear"></button>
+                    <input type="text" id="searchTerm" class="form-control" placeholder="Employee name or code..."
+                           value="@Model.SearchTerm" />
+                    <button type="button" id="clearSearch"
+                            class="btn-close position-absolute top-50 end-0 translate-middle-y me-2 d-none"
+                            aria-label="Clear"></button>
                 </div>
             </div>
             <div class="col-6 col-lg-2">
                 <label class="form-label">Start Date From</label>
-                <input type="date" id="dateRangeStart" class="form-control" value="@(Model.DateRangeStart?.ToString("yyyy-MM-dd"))" />
+                <input type="date" id="dateRangeStart" class="form-control"
+                       value="@(Model.DateRangeStart?.ToString("yyyy-MM-dd"))" />
             </div>
             <div class="col-6 col-lg-2">
                 <label class="form-label">Start Date To</label>
-                <input type="date" id="dateRangeEnd" class="form-control" value="@(Model.DateRangeEnd?.ToString("yyyy-MM-dd"))" />
+                <input type="date" id="dateRangeEnd" class="form-control"
+                       value="@(Model.DateRangeEnd?.ToString("yyyy-MM-dd"))" />
             </div>
-            <div class="col-12 col-lg-4 d-flex align-items-end flex-wrap gap-3">
+            <div class="col-12 col-lg-4">
+                <label class="form-label">Status</label>
+                <select id="statusFilter" class="form-select">
+                    <option value="current" selected="@(Model.Status == "current" ? "selected" : null)">Current</option>
+                    <option value="scheduled" selected="@(Model.Status == "scheduled" ? "selected" : null)">Scheduled
+                    </option>
+                    <option value="ended" selected="@(Model.Status == "ended" ? "selected" : null)">Ended</option>
+                    <option value="all" selected="@(Model.Status == "all" ? "selected" : null)">All</option>
+                </select>
+            </div>
+            @* <div class="col-12 col-lg-4 d-flex align-items-end">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="showAll" @(Model.ShowAll ? "checked" : "") />
-                    <label class="form-check-label" for="showAll">Show all rates (not just current)</label>
-                </div>
-                @* <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="showInactiveEmployees" @(Model.ShowInactiveEmployees ? "checked" : "") />
                     <label class="form-check-label" for="showInactiveEmployees">Include inactive employees</label>
-                </div> *@
-            </div>
+                </div>
+            </div> *@
         </div>
     </div>
 </div>
@@ -109,6 +121,10 @@
                             <input type="number" step="0.01" name="BaseRate" class="form-control" />
                         </div>
                     </div>
+                    <div class="form-text mt-2">
+                        The row is always saved. It shows as <strong>Current</strong> only while today is on or between
+                        its start and end dates; a future start date shows as <strong>Scheduled</strong>.
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -119,44 +135,63 @@
     </div>
 </div>
 
-<!-- Apply Seasonal Adjustment Modal -->
+<!-- Apply Adjustment Modal (Seasonal / Annual) -->
 <div class="modal fade" id="seasonalAdjustmentModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Apply Seasonal Adjustment</h5>
+                <h5 class="modal-title">Apply Adjustment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small">
-                    Standard: rates go up 10% on the first Sunday after Thanksgiving and back down 10%
-                    on the last Saturday in March. Choose "Custom" to use a different percentage. This ends
-                    each affected employee's current rate the day before the effective date and starts a
-                    new rate at the adjusted amount.
-                </p>
+                <div class="mb-3">
+                    <label class="form-label">Adjustment Type</label>
+                    <select id="adjustmentType" class="form-select">
+                        <option value="seasonal">Seasonal (changes Rate only)</option>
+                        <option value="annual">Annual (changes Rate and Base Rate)</option>
+                    </select>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label">Direction</label>
                     <select id="seasonalDirection" class="form-select">
                         <option value="increase">Increase</option>
                         <option value="decrease">Decrease</option>
                     </select>
+                    <div class="form-text" id="seasonalRuleHint"></div>
                 </div>
+
                 <div class="mb-3">
-                    <label class="form-label">Amount</label>
+                    <label class="form-label" id="seasonalAmountLabel">Amount</label>
                     <select id="seasonalAmountMode" class="form-select">
                         <option value="standard">Standard (10%)</option>
                         <option value="custom">Custom percentage</option>
                     </select>
                     <div class="input-group mt-2 d-none" id="seasonalCustomGroup">
-                        <input type="number" id="seasonalCustomPercent" class="form-control" min="0.01" max="100" step="0.01" placeholder="e.g. 5" />
+                        <input type="number" id="seasonalCustomPercent" class="form-control" min="0.01" max="100"
+                               step="0.01" placeholder="e.g. 5" />
                         <span class="input-group-text">%</span>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label">Effective Date</label>
-                    <input type="date" id="seasonalEffectiveDate" class="form-control" required />
-                    <div class="form-text" id="seasonalDateHint"></div>
+
+                <!-- Seasonal: start + end -->
+                <div class="row g-2 mb-3" id="seasonalDateGroup">
+                    <div class="col-6">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" id="seasonalStartDate" class="form-control" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label">End Date</label>
+                        <input type="date" id="seasonalEndDate" class="form-control" />
+                    </div>
                 </div>
+
+                <!-- Annual: single effective date -->
+                <div class="mb-3 d-none" id="annualDateGroup">
+                    <label class="form-label">Effective Date</label>
+                    <input type="date" id="annualEffectiveDate" class="form-control" />
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label">Apply To</label>
                     <select id="seasonalScope" class="form-select">
@@ -221,278 +256,343 @@
 </div>
 
 @section Scripts {
-<script>
-(function () {
-    let deleteTargetId = null;
+    <script>
+        (function () {
+            let deleteTargetId = null;
 
-    // Rows per page: starts at what the server rendered, changed by the footer dropdown
-    window.employeeRatePageSize = @Model.PageSize;
+            // Rows per page: starts at what the server rendered, changed by the footer dropdown
+            window.employeeRatePageSize = @Model.PageSize;
 
-    function showToast(message, isSuccess) {
-        const toastEl = document.getElementById('employeeRateToast');
-        const bodyEl = document.getElementById('employeeRateToastBody');
-        toastEl.classList.remove('bg-success', 'bg-danger');
-        toastEl.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
-        bodyEl.textContent = message;
-        new bootstrap.Toast(toastEl).show();
-    }
-    window.showEmployeeRateToast = showToast;
+            function showToast(message, isSuccess) {
+                const toastEl = document.getElementById('employeeRateToast');
+                const bodyEl = document.getElementById('employeeRateToastBody');
+                toastEl.classList.remove('bg-success', 'bg-danger');
+                toastEl.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+                bodyEl.textContent = message;
+                new bootstrap.Toast(toastEl).show();
+            }
+            window.showEmployeeRateToast = showToast;
 
-    // The Update/Delete/BulkEndDate/ApplySeasonalAdjustment actions are [ValidateAntiForgeryToken],
-    // but their POSTs are built by hand (not via FormData on the Add Rate <form>), so the token has
-    // to be pulled from the hidden field the Add Rate form renders and attached explicitly —
-    // otherwise every one of those calls 400s.
-    window.getEmployeeRateAntiForgeryToken = function () {
-        const tokenInput = document.querySelector('#addEmployeeRateForm input[name="__RequestVerificationToken"]');
-        return tokenInput ? tokenInput.value : '';
-    };
+            // The Update/Delete/BulkEndDate/ApplySeasonalAdjustment actions are [ValidateAntiForgeryToken],
+            // but their POSTs are built by hand (not via FormData on the Add Rate <form>), so the token has
+            // to be pulled from the hidden field the Add Rate form renders and attached explicitly —
+            // otherwise every one of those calls 400s.
+            window.getEmployeeRateAntiForgeryToken = function () {
+                const tokenInput = document.querySelector('#addEmployeeRateForm input[name="__RequestVerificationToken"]');
+                return tokenInput ? tokenInput.value : '';
+            };
 
-    function buildParams(page) {
-        const params = new URLSearchParams();
-        params.set('SearchTerm', document.getElementById('searchTerm').value || '');
-        params.set('ShowAll', document.getElementById('showAll').checked);
-        // "Include inactive employees" checkbox is commented out in the view above
-        params.set('ShowInactiveEmployees', document.getElementById('showInactiveEmployees')?.checked ?? false);
-        const empId = document.getElementById('employeeObjectIdFilter').value;
-        if (empId) params.set('EmployeeObjectId', empId);
-        const start = document.getElementById('dateRangeStart').value;
-        if (start) params.set('DateRangeStart', start);
-        const end = document.getElementById('dateRangeEnd').value;
-        if (end) params.set('DateRangeEnd', end);
-        params.set('SortField', window.employeeRateSortField || 'EmployeeName');
-        params.set('SortDirection', window.employeeRateSortDir || 'asc');
-        params.set('Page', page || 1);
-        params.set('PageSize', window.employeeRatePageSize || 15);
-        return params;
-    }
+            function buildParams(page) {
+                const params = new URLSearchParams();
+                params.set('SearchTerm', document.getElementById('searchTerm').value || '');
+                params.set('Status', document.getElementById('statusFilter').value);
+                // "Include inactive employees" checkbox is commented out in the view above
+                params.set('ShowInactiveEmployees', document.getElementById('showInactiveEmployees')?.checked ?? false);
+                const empId = document.getElementById('employeeObjectIdFilter').value;
+                if (empId) params.set('EmployeeObjectId', empId);
+                const start = document.getElementById('dateRangeStart').value;
+                if (start) params.set('DateRangeStart', start);
+                const end = document.getElementById('dateRangeEnd').value;
+                if (end) params.set('DateRangeEnd', end);
+                params.set('SortField', window.employeeRateSortField || 'EmployeeName');
+                params.set('SortDirection', window.employeeRateSortDir || 'asc');
+                params.set('Page', page || 1);
+                params.set('PageSize', window.employeeRatePageSize || 15);
+                return params;
+            }
 
-    window.refreshEmployeeRateTable = function (page) {
-        const params = buildParams(page);
-        fetch('/EmployeeRate/GetTable?' + params.toString())
-            .then(r => r.text())
-            .then(html => {
-                document.getElementById('employeeRateTableContainer').innerHTML = html;
-                updateBulkButtonState();
-            });
-    };
+            window.refreshEmployeeRateTable = function (page) {
+                const params = buildParams(page);
+                fetch('/EmployeeRate/GetTable?' + params.toString())
+                    .then(r => r.text())
+                    .then(html => {
+                        document.getElementById('employeeRateTableContainer').innerHTML = html;
+                        updateBulkButtonState();
+                    });
+            };
 
-    document.getElementById('searchTerm').addEventListener('input', function () {
-        document.getElementById('clearSearch').classList.toggle('d-none', this.value.length === 0);
-        refreshEmployeeRateTable(1);
-    });
-    document.getElementById('clearSearch').addEventListener('click', function () {
-        document.getElementById('searchTerm').value = '';
-        this.classList.add('d-none');
-        refreshEmployeeRateTable(1);
-    });
-
-    // Every filter control resets to page 1 on change — this is what stops the grid from
-    // landing on an out-of-range page after a filter shrinks the result set.
-    ['showAll', 'dateRangeStart', 'dateRangeEnd'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => refreshEmployeeRateTable(1));
-    });
-
-    document.getElementById('addEmployeeRateForm').addEventListener('submit', function (e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const params = new URLSearchParams();
-        for (const [key, value] of formData.entries()) params.append(key, value);
-
-        fetch('/EmployeeRate/Create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        })
-        .then(r => r.json())
-        .then(res => {
-            showToast(res.message, res.success);
-            if (res.success) {
-                bootstrap.Modal.getInstance(document.getElementById('addEmployeeRateModal')).hide();
-                this.reset();
+            document.getElementById('searchTerm').addEventListener('input', function () {
+                document.getElementById('clearSearch').classList.toggle('d-none', this.value.length === 0);
                 refreshEmployeeRateTable(1);
-            }
-        });
-    });
-
-    function updateBulkButtonState() {
-        const checked = document.querySelectorAll('.rate-row-check:checked');
-
-        const bulkBtn = document.getElementById('bulkEndDateBtn');
-        bulkBtn.disabled = checked.length === 0;
-        bulkBtn.innerHTML = '<i class="bi bi-calendar-x"></i> ' +
-            (checked.length > 0 ? `Bulk End-Date (${checked.length})` : 'Bulk End-Date');
-
-        document.getElementById('exportPdfBtn').innerHTML =
-            '<i class="bi bi-file-earmark-pdf"></i> ' +
-            (checked.length > 0 ? `Export PDF (${checked.length} selected)` : 'Export PDF');
-    }
-
-    // One delegated 'change' listener for everything inside the (re-rendered) table container:
-    // the rows-per-page dropdown and the row / select-all checkboxes.
-    document.getElementById('employeeRateTableContainer').addEventListener('change', function (e) {
-        if (e.target.id === 'pageSizeSelect') {
-            window.employeeRatePageSize = +e.target.value;
-            refreshEmployeeRateTable(1);
-            return;
-        }
-
-        if (e.target.classList.contains('rate-row-check') || e.target.id === 'selectAllRates') {
-            if (e.target.id === 'selectAllRates') {
-                document.querySelectorAll('.rate-row-check').forEach(cb => cb.checked = e.target.checked);
-            }
-            updateBulkButtonState();
-        }
-    });
-
-    document.getElementById('employeeRateTableContainer').addEventListener('click', function (e) {
-        const delBtn = e.target.closest('.btn-delete-rate');
-        if (delBtn) {
-            deleteTargetId = delBtn.dataset.id;
-            new bootstrap.Modal(document.getElementById('deleteEmployeeRateModal')).show();
-        }
-    });
-
-    document.getElementById('confirmDeleteEmployeeRateBtn').addEventListener('click', function () {
-        const params = new URLSearchParams();
-        params.set('id', deleteTargetId);
-        params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
-        fetch('/EmployeeRate/Delete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        })
-        .then(r => r.json())
-        .then(res => {
-            showToast(res.message, res.success);
-            bootstrap.Modal.getInstance(document.getElementById('deleteEmployeeRateModal')).hide();
-            if (res.success) refreshEmployeeRateTable(1);
-        });
-    });
-
-    // Export PDF: same filters/sort as the grid. If rows are checked, only those are exported;
-    // otherwise everything matching the current filters (all pages) is exported.
-    document.getElementById('exportPdfBtn').addEventListener('click', function () {
-        const params = buildParams(1);
-        params.delete('Page');
-        params.delete('PageSize');
-        document.querySelectorAll('.rate-row-check:checked')
-            .forEach(cb => params.append('selectedIds', cb.dataset.id));
-        window.location.href = '/EmployeeRate/ExportPdf?' + params.toString();
-    });
-
-    document.getElementById('bulkEndDateBtn').addEventListener('click', function () {
-        const checked = document.querySelectorAll('.rate-row-check:checked');
-        document.getElementById('bulkEndDateCount').textContent = checked.length;
-        new bootstrap.Modal(document.getElementById('bulkEndDateModal')).show();
-    });
-
-    document.getElementById('confirmBulkEndDateBtn').addEventListener('click', function () {
-        const ids = Array.from(document.querySelectorAll('.rate-row-check:checked')).map(cb => cb.dataset.id);
-        const endDate = document.getElementById('bulkEndDateValue').value;
-        if (!endDate || ids.length === 0) return;
-
-        const params = new URLSearchParams();
-        ids.forEach(id => params.append('ObjectIDs', id));
-        params.set('EndDate', endDate);
-        params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
-
-        fetch('/EmployeeRate/BulkEndDate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        })
-        .then(r => r.json())
-        .then(res => {
-            showToast(res.message, res.success);
-            bootstrap.Modal.getInstance(document.getElementById('bulkEndDateModal')).hide();
-            if (res.success) refreshEmployeeRateTable(1);
-        });
-    });
-
-    // ---- Seasonal adjustment -------------------------------------------------------------
-
-    // Show / hide the custom percentage box
-    document.getElementById('seasonalAmountMode').addEventListener('change', function () {
-        document.getElementById('seasonalCustomGroup').classList.toggle('d-none', this.value !== 'custom');
-    });
-
-    // Each time the modal opens: reflect what's checked in the grid, reset the amount to the
-    // standard 10%, and pull the computed dates from the server (SeasonalRateHelper), defaulting
-    // the direction/date to whichever is coming up next.
-    document.getElementById('seasonalAdjustmentModal').addEventListener('show.bs.modal', function () {
-        const checkedCount = document.querySelectorAll('.rate-row-check:checked').length;
-        const scopeSel = document.getElementById('seasonalScope');
-        scopeSel.querySelector('option[value="selected"]').textContent =
-            checkedCount > 0
-                ? `Only the ${checkedCount} row(s) currently checked in the grid`
-                : 'Only the rows currently checked in the grid (none checked)';
-        scopeSel.value = checkedCount > 0 ? 'selected' : 'all';
-
-        document.getElementById('seasonalAmountMode').value = 'standard';
-        document.getElementById('seasonalCustomGroup').classList.add('d-none');
-        document.getElementById('seasonalCustomPercent').value = '';
-
-        fetch('/EmployeeRate/GetSeasonalDates')
-            .then(r => r.json())
-            .then(res => {
-                document.getElementById('seasonalDirection').value = res.nextIsIncrease ? 'increase' : 'decrease';
-                document.getElementById('seasonalEffectiveDate').value = res.nextDate;
-                document.getElementById('seasonalDateHint').textContent =
-                    `Next increase: ${res.increaseDate} · Next decrease: ${res.decreaseDate}`;
             });
-    });
-
-    document.getElementById('confirmSeasonalAdjustmentBtn').addEventListener('click', function () {
-        const isIncrease = document.getElementById('seasonalDirection').value === 'increase';
-        const effectiveDate = document.getElementById('seasonalEffectiveDate').value;
-        const scope = document.getElementById('seasonalScope').value;
-        if (!effectiveDate) return;
-
-        let percent = 10;
-        if (document.getElementById('seasonalAmountMode').value === 'custom') {
-            percent = parseFloat(document.getElementById('seasonalCustomPercent').value);
-            if (!(percent > 0) || percent > 100 || (!isIncrease && percent >= 100)) {
-                showToast('Enter a valid custom percentage (greater than 0, and under 100 for a decrease).', false);
-                return;
-            }
-        }
-
-        const params = new URLSearchParams();
-        params.set('IsIncrease', isIncrease);
-        params.set('EffectiveDate', effectiveDate);
-        params.set('Percent', percent);
-        params.set('SelectedOnly', scope === 'selected');
-        params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
-
-        if (scope === 'selected') {
-            // These are EmployeeRate ObjectIDs on the grid; the endpoint expects the
-            // *employee* IDs, so resolve each checked rate row back to its employee
-            // (a Set de-duplicates employees with more than one checked row).
-            const empIds = new Set();
-            document.querySelectorAll('.rate-row-check:checked').forEach(cb => {
-                const row = document.querySelector(`tr[data-id="${cb.dataset.id}"]`);
-                const empId = row?.querySelector('.cell-input-always')?.value;
-                if (empId) empIds.add(empId);
+            document.getElementById('clearSearch').addEventListener('click', function () {
+                document.getElementById('searchTerm').value = '';
+                this.classList.add('d-none');
+                refreshEmployeeRateTable(1);
             });
-            if (empIds.size === 0) {
-                showToast('No rows are checked in the grid — switch "Apply To" to all employees, or check some rows first.', false);
-                return;
-            }
-            empIds.forEach(id => params.append('EmployeeObjectIds', id));
-        }
 
-        fetch('/EmployeeRate/ApplySeasonalAdjustment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        })
-        .then(r => r.json())
-        .then(res => {
-            showToast(res.message, res.success);
-            bootstrap.Modal.getInstance(document.getElementById('seasonalAdjustmentModal')).hide();
-            if (res.success) refreshEmployeeRateTable(1);
-        });
-    });
-})();
-</script>
+            // Every filter control resets to page 1 on change — this is what stops the grid from
+            // landing on an out-of-range page after a filter shrinks the result set.
+            ['statusFilter', 'dateRangeStart', 'dateRangeEnd'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => refreshEmployeeRateTable(1));
+            });
+
+            document.getElementById('addEmployeeRateForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const params = new URLSearchParams();
+                for (const [key, value] of formData.entries()) params.append(key, value);
+
+                fetch('/EmployeeRate/Create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        showToast(res.message, res.success);
+                        if (res.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('addEmployeeRateModal')).hide();
+                            this.reset();
+                            refreshEmployeeRateTable(1);
+                        }
+                    });
+            });
+
+            function updateBulkButtonState() {
+                const checked = document.querySelectorAll('.rate-row-check:checked');
+
+                const bulkBtn = document.getElementById('bulkEndDateBtn');
+                bulkBtn.disabled = checked.length === 0;
+                bulkBtn.innerHTML = '<i class="bi bi-calendar-x"></i> ' +
+                    (checked.length > 0 ? `Bulk End-Date (${checked.length})` : 'Bulk End-Date');
+
+                document.getElementById('exportPdfBtn').innerHTML =
+                    '<i class="bi bi-file-earmark-pdf"></i> ' +
+                    (checked.length > 0 ? `Export PDF (${checked.length} selected)` : 'Export PDF');
+            }
+
+            // One delegated 'change' listener for everything inside the (re-rendered) table container:
+            // the rows-per-page dropdown and the row / select-all checkboxes.
+            document.getElementById('employeeRateTableContainer').addEventListener('change', function (e) {
+                if (e.target.id === 'pageSizeSelect') {
+                    window.employeeRatePageSize = +e.target.value;
+                    refreshEmployeeRateTable(1);
+                    return;
+                }
+
+                if (e.target.classList.contains('rate-row-check') || e.target.id === 'selectAllRates') {
+                    if (e.target.id === 'selectAllRates') {
+                        document.querySelectorAll('.rate-row-check').forEach(cb => cb.checked = e.target.checked);
+                    }
+                    updateBulkButtonState();
+                }
+            });
+
+            // Click anywhere on a row (outside buttons / inputs) to tick or untick its checkbox —
+            // a much bigger target than the checkbox itself on wide screens.
+            document.getElementById('employeeRateTableContainer').addEventListener('click', function (e) {
+                if (e.target.closest('button, a, input, select, label, th, .cell-input')) return;
+                const cb = e.target.closest('tbody tr')?.querySelector('.rate-row-check');
+                if (!cb) return;
+                cb.checked = !cb.checked;
+                cb.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+
+            document.getElementById('employeeRateTableContainer').addEventListener('click', function (e) {
+                const delBtn = e.target.closest('.btn-delete-rate');
+                if (delBtn) {
+                    deleteTargetId = delBtn.dataset.id;
+                    new bootstrap.Modal(document.getElementById('deleteEmployeeRateModal')).show();
+                }
+            });
+
+            document.getElementById('confirmDeleteEmployeeRateBtn').addEventListener('click', function () {
+                const params = new URLSearchParams();
+                params.set('id', deleteTargetId);
+                params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
+                fetch('/EmployeeRate/Delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        showToast(res.message, res.success);
+                        bootstrap.Modal.getInstance(document.getElementById('deleteEmployeeRateModal')).hide();
+                        if (res.success) refreshEmployeeRateTable(1);
+                    });
+            });
+
+            // Export PDF: same filters/sort as the grid. If rows are checked, only those are exported;
+            // otherwise everything matching the current filters (all pages) is exported.
+            document.getElementById('exportPdfBtn').addEventListener('click', function () {
+                const params = buildParams(1);
+                params.delete('Page');
+                params.delete('PageSize');
+                document.querySelectorAll('.rate-row-check:checked')
+                    .forEach(cb => params.append('selectedIds', cb.dataset.id));
+                window.location.href = '/EmployeeRate/ExportPdf?' + params.toString();
+            });
+
+            document.getElementById('bulkEndDateBtn').addEventListener('click', function () {
+                const checked = document.querySelectorAll('.rate-row-check:checked');
+                document.getElementById('bulkEndDateCount').textContent = checked.length;
+                new bootstrap.Modal(document.getElementById('bulkEndDateModal')).show();
+            });
+
+            document.getElementById('confirmBulkEndDateBtn').addEventListener('click', function () {
+                const ids = Array.from(document.querySelectorAll('.rate-row-check:checked')).map(cb => cb.dataset.id);
+                const endDate = document.getElementById('bulkEndDateValue').value;
+                if (!endDate || ids.length === 0) return;
+
+                const params = new URLSearchParams();
+                ids.forEach(id => params.append('ObjectIDs', id));
+                params.set('EndDate', endDate);
+                params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
+
+                fetch('/EmployeeRate/BulkEndDate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        showToast(res.message, res.success);
+                        bootstrap.Modal.getInstance(document.getElementById('bulkEndDateModal')).hide();
+                        if (res.success) refreshEmployeeRateTable(1);
+                    });
+            });
+
+            // ---- Adjustment (seasonal / annual) ----------------------------------------------------
+
+            let seasonalPeriods = null; // filled from /EmployeeRate/GetSeasonalDates
+
+            function isSeasonalType() {
+                return document.getElementById('adjustmentType').value === 'seasonal';
+            }
+
+            // Seasonal: pre-fill Start/End from the server-computed period for the chosen direction.
+            function fillSeasonalDates() {
+                if (!seasonalPeriods) return;
+                const inc = document.getElementById('seasonalDirection').value === 'increase';
+                document.getElementById('seasonalStartDate').value = inc ? seasonalPeriods.increaseStart : seasonalPeriods.decreaseStart;
+                document.getElementById('seasonalEndDate').value = inc ? seasonalPeriods.increaseEnd : seasonalPeriods.decreaseEnd;
+            }
+
+            // Shows/hides the right fields for the chosen type and direction.
+            function refreshAdjustmentUI() {
+                const seasonal = isSeasonalType();
+                const inc = document.getElementById('seasonalDirection').value === 'increase';
+                const modeSel = document.getElementById('seasonalAmountMode');
+
+                document.getElementById('seasonalDateGroup').classList.toggle('d-none', !seasonal);
+                document.getElementById('annualDateGroup').classList.toggle('d-none', seasonal);
+
+                // Seasonal can use the standard 10% or a custom percentage.
+                // Annual has no standard amount, so it always uses the percentage box.
+                modeSel.classList.toggle('d-none', !seasonal);
+                if (!seasonal) modeSel.value = 'custom';
+                document.getElementById('seasonalAmountLabel').textContent = seasonal ? 'Amount' : 'Percentage';
+                document.getElementById('seasonalCustomGroup').classList.toggle('d-none', modeSel.value !== 'custom');
+                document.getElementById('seasonalCustomGroup').classList.toggle('mt-2', seasonal);
+
+                document.getElementById('seasonalRuleHint').textContent = seasonal
+                    ? (inc ? 'Rates go up 10% on the first Sunday after Thanksgiving.'
+                        : 'Rates go back down 10% on the last Saturday in March.')
+                    + ' Seasonal changes Rate only. Choose Custom to use a different percentage.'
+                    : 'Annual changes both Rate and Base Rate by the percentage entered below.';
+
+                if (seasonal) fillSeasonalDates();
+            }
+
+            document.getElementById('adjustmentType').addEventListener('change', refreshAdjustmentUI);
+            document.getElementById('seasonalDirection').addEventListener('change', refreshAdjustmentUI);
+            document.getElementById('seasonalAmountMode').addEventListener('change', refreshAdjustmentUI);
+
+            // Each time the modal opens: reflect what's checked in the grid, reset to Seasonal / standard
+            // 10%, and pull the computed periods from the server (SeasonalRateHelper), defaulting the
+            // direction to whichever comes up next.
+            document.getElementById('seasonalAdjustmentModal').addEventListener('show.bs.modal', function () {
+                const checkedCount = document.querySelectorAll('.rate-row-check:checked').length;
+                const scopeSel = document.getElementById('seasonalScope');
+                scopeSel.querySelector('option[value="selected"]').textContent =
+                    checkedCount > 0
+                        ? `Only the ${checkedCount} row(s) currently checked in the grid`
+                        : 'Only the rows currently checked in the grid (none checked)';
+                scopeSel.value = checkedCount > 0 ? 'selected' : 'all';
+
+                document.getElementById('adjustmentType').value = 'seasonal';
+                document.getElementById('seasonalAmountMode').value = 'standard';
+                document.getElementById('seasonalCustomPercent').value = '';
+                document.getElementById('annualEffectiveDate').value = '';
+                refreshAdjustmentUI();
+
+                fetch('/EmployeeRate/GetSeasonalDates')
+                    .then(r => r.json())
+                    .then(res => {
+                        seasonalPeriods = res;
+                        document.getElementById('seasonalDirection').value = res.nextIsIncrease ? 'increase' : 'decrease';
+                        refreshAdjustmentUI();
+                    });
+            });
+
+            document.getElementById('confirmSeasonalAdjustmentBtn').addEventListener('click', function () {
+                const seasonal = isSeasonalType();
+                const isIncrease = document.getElementById('seasonalDirection').value === 'increase';
+                const scope = document.getElementById('seasonalScope').value;
+
+                const startDate = seasonal
+                    ? document.getElementById('seasonalStartDate').value
+                    : document.getElementById('annualEffectiveDate').value;
+                const endDate = seasonal ? document.getElementById('seasonalEndDate').value : '';
+
+                if (!startDate || (seasonal && !endDate)) {
+                    showToast(seasonal ? 'Start and end dates are required.' : 'Effective date is required.', false);
+                    return;
+                }
+                if (seasonal && endDate < startDate) {
+                    showToast('End date must be on or after the start date.', false);
+                    return;
+                }
+
+                let percent = 10;
+                if (!seasonal || document.getElementById('seasonalAmountMode').value === 'custom') {
+                    percent = parseFloat(document.getElementById('seasonalCustomPercent').value);
+                    if (!(percent > 0) || percent > 100 || (!isIncrease && percent >= 100)) {
+                        showToast('Enter a valid percentage (greater than 0, and under 100 for a decrease).', false);
+                        return;
+                    }
+                }
+
+                const params = new URLSearchParams();
+                params.set('IsSeasonal', seasonal);
+                params.set('IsIncrease', isIncrease);
+                params.set('StartDate', startDate);
+                if (seasonal) params.set('EndDate', endDate);
+                params.set('Percent', percent);
+                params.set('SelectedOnly', scope === 'selected');
+                params.set('__RequestVerificationToken', window.getEmployeeRateAntiForgeryToken());
+
+                if (scope === 'selected') {
+                    // These are EmployeeRate ObjectIDs on the grid; the endpoint expects the
+                    // *employee* IDs, so resolve each checked rate row back to its employee
+                    // (a Set de-duplicates employees with more than one checked row).
+                    const empIds = new Set();
+                    document.querySelectorAll('.rate-row-check:checked').forEach(cb => {
+                        const row = document.querySelector(`tr[data-id="${cb.dataset.id}"]`);
+                        const empId = row?.querySelector('.cell-input-always')?.value;
+                        if (empId) empIds.add(empId);
+                    });
+                    if (empIds.size === 0) {
+                        showToast('No rows are checked in the grid — switch "Apply To" to all employees, or check some rows first.', false);
+                        return;
+                    }
+                    empIds.forEach(id => params.append('EmployeeObjectIds', id));
+                }
+
+                fetch('/EmployeeRate/ApplySeasonalAdjustment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: params.toString()
+                })
+                    .then(r => r.json())
+                    .then(res => {
+                        showToast(res.message, res.success);
+                        bootstrap.Modal.getInstance(document.getElementById('seasonalAdjustmentModal')).hide();
+                        if (res.success) refreshEmployeeRateTable(1);
+                    });
+            });
+        })();
+    </script>
 }

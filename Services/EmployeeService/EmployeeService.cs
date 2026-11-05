@@ -83,14 +83,29 @@ namespace CostAccounting.Services.EmployeeService
 
             filter.TotalCount = await query.CountAsync();
 
-            query = filter.SortField switch
+            // Name sorts are last name, then first name (so two people with the same last name stay
+            // in first-name order). Other sorts fall back to last, first name for ties, and every
+            // sort ends with ObjectID so equal rows keep a stable order across pages.
+            var asc = filter.SortDirection == "asc";
+            IOrderedQueryable<Employee> ordered = filter.SortField switch
             {
-                "FirstName" => filter.SortDirection == "asc" ? query.OrderBy(e => e.FirstName) : query.OrderByDescending(e => e.FirstName),
-                "Code" => filter.SortDirection == "asc" ? query.OrderBy(e => e.Code) : query.OrderByDescending(e => e.Code),
-                "HireDate" => filter.SortDirection == "asc" ? query.OrderBy(e => e.HireDate) : query.OrderByDescending(e => e.HireDate),
-                "LongevityDate" => filter.SortDirection == "asc" ? query.OrderBy(e => e.LongevityDate) : query.OrderByDescending(e => e.LongevityDate),
-                _ => filter.SortDirection == "asc" ? query.OrderBy(e => e.LastName) : query.OrderByDescending(e => e.LastName),
+                "FirstName" => asc
+                    ? query.OrderBy(e => e.FirstName).ThenBy(e => e.LastName)
+                    : query.OrderByDescending(e => e.FirstName).ThenByDescending(e => e.LastName),
+                "Code" => asc
+                    ? query.OrderBy(e => e.Code).ThenBy(e => e.LastName).ThenBy(e => e.FirstName)
+                    : query.OrderByDescending(e => e.Code).ThenBy(e => e.LastName).ThenBy(e => e.FirstName),
+                "HireDate" => asc
+                    ? query.OrderBy(e => e.HireDate).ThenBy(e => e.LastName).ThenBy(e => e.FirstName)
+                    : query.OrderByDescending(e => e.HireDate).ThenBy(e => e.LastName).ThenBy(e => e.FirstName),
+                "LongevityDate" => asc
+                    ? query.OrderBy(e => e.LongevityDate).ThenBy(e => e.LastName).ThenBy(e => e.FirstName)
+                    : query.OrderByDescending(e => e.LongevityDate).ThenBy(e => e.LastName).ThenBy(e => e.FirstName),
+                _ => asc
+                    ? query.OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
+                    : query.OrderByDescending(e => e.LastName).ThenByDescending(e => e.FirstName),
             };
+            query = ordered.ThenBy(e => e.ObjectID);
 
             var entities = await query
                 .Skip((filter.Page - 1) * filter.PageSize)
@@ -99,9 +114,12 @@ namespace CostAccounting.Services.EmployeeService
 
             // Current/base rate per employee on this page (separate query + in-memory filter,
             // same Contains()->CTE workaround used elsewhere in this app).
+            // "Current" = today is on or between the rate's start and end dates, so a Scheduled
+            // (future-dated) rate is NOT picked up until its start date arrives.
             var employeeIdsOnPage = entities.Select(e => e.ObjectID).ToHashSet();
+            var today = DateTime.Today;
             var currentRatesByEmployee = (await _context.EmployeeRates
-                    .Where(er => !er.Deleted && (er.EndDate == null || er.EndDate >= DateTime.Today))
+                    .Where(er => !er.Deleted && er.StartDate <= today && (er.EndDate == null || er.EndDate >= today))
                     .ToListAsync())
                 .Where(er => employeeIdsOnPage.Contains(er.EmployeeObjectId))
                 .GroupBy(er => er.EmployeeObjectId)

@@ -7,7 +7,7 @@ namespace CostAccounting.Models
     {
         public int ObjectID { get; set; }
         public int EmployeeObjectId { get; set; }
-        public string EmployeeName { get; set; } 
+        public string EmployeeName { get; set; }
         public string EmployeeCode { get; set; }
 
         public DateTime StartDate { get; set; }
@@ -15,7 +15,14 @@ namespace CostAccounting.Models
         public decimal Rate { get; set; }
         public decimal? BaseRate { get; set; }
 
-        public bool IsCurrent => !EndDate.HasValue || EndDate.Value >= DateTime.Today;
+        // Current = today is the start date, the end date, or anywhere in between.
+        // A blank end date means open-ended.
+        public bool IsCurrent =>
+            StartDate.Date <= DateTime.Today &&
+            (!EndDate.HasValue || EndDate.Value.Date >= DateTime.Today);
+
+        // Scheduled = the row exists but its start date hasn't arrived yet.
+        public bool IsScheduled => StartDate.Date > DateTime.Today;
     }
 
     public class EmployeeRateIndexVM
@@ -24,7 +31,8 @@ namespace CostAccounting.Models
 
         public string SearchTerm { get; set; }
         public int? EmployeeObjectId { get; set; } // filter to one employee's rate history
-        public bool ShowAll { get; set; } // include end-dated rate rows
+        // Status filter: "current" (default), "scheduled", "ended" or "all"
+        public string Status { get; set; } = "current";
         // public bool ShowInactiveEmployees { get; set; } // include rates belonging to inactive employees
         public DateTime? DateRangeStart { get; set; }
         public DateTime? DateRangeEnd { get; set; }
@@ -48,14 +56,19 @@ namespace CostAccounting.Models
         public DateTime EndDate { get; set; }
     }
 
-    // Payload for the seasonal +/-10% adjustment. EmployeeObjectIds empty/omitted means
-    // "apply to every active employee with a current rate."
+    // Payload for the adjustment modal.
+    //   IsSeasonal   : true  = seasonal (changes Rate only, uses StartDate..EndDate)
+    //                  false = annual   (changes Rate AND BaseRate, uses StartDate as the effective date, open-ended)
+    //   Percent      : 10 = the standard seasonal swing; any other value is a custom percentage.
+    //   SelectedOnly : true = apply only to EmployeeObjectIds (never falls back to "everyone").
     public class SeasonalAdjustmentRequest
-{
-    public bool IsIncrease { get; set; }
-    public DateTime EffectiveDate { get; set; }
-    public decimal Percent { get; set; } = 10m;   // 10 = standard, otherwise custom
-    public bool SelectedOnly { get; set; }        // true = only EmployeeObjectIds, never "everyone"
-    public List<int> EmployeeObjectIds { get; set; }
-}
+    {
+        public bool IsSeasonal { get; set; }
+        public bool IsIncrease { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public decimal Percent { get; set; } = 10m;
+        public bool SelectedOnly { get; set; }
+        public List<int> EmployeeObjectIds { get; set; }
+    }
 }

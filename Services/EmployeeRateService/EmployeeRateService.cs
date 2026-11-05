@@ -27,8 +27,26 @@ namespace CostAccounting.Services.EmployeeRateService
             if (filter.EmployeeObjectId.HasValue)
                 query = query.Where(er => er.EmployeeObjectId == filter.EmployeeObjectId);
 
-            if (!filter.ShowAll)
-                query = query.Where(er => er.EndDate == null || er.EndDate >= DateTime.Today);
+            // Status filter (same rules as EmployeeRateVM.IsCurrent / IsScheduled):
+            //   current   : start date <= today AND (no end date OR end date >= today)   [default]
+            //   scheduled : start date > today
+            //   ended     : end date < today
+            //   all       : no status filtering
+            var today = DateTime.Today;
+            switch ((filter.Status ?? "current").ToLowerInvariant())
+            {
+                case "all":
+                    break;
+                case "scheduled":
+                    query = query.Where(er => er.StartDate > today);
+                    break;
+                case "ended":
+                    query = query.Where(er => er.EndDate != null && er.EndDate < today);
+                    break;
+                default: // "current"
+                    query = query.Where(er => er.StartDate <= today && (er.EndDate == null || er.EndDate >= today));
+                    break;
+            }
 
             if (filter.DateRangeStart.HasValue)
                 query = query.Where(er => er.StartDate >= filter.DateRangeStart);
@@ -47,15 +65,30 @@ namespace CostAccounting.Services.EmployeeRateService
 
             filter.TotalCount = await query.CountAsync();
 
-            query = filter.SortField switch
+            // Employee name sorts by last name, then first name, then newest rate first, so two
+            // people with the same last name stay in first-name order and one person's rows
+            // stay together. Every sort ends with ObjectID so ties keep a stable order across pages.
+            var asc = filter.SortDirection == "asc";
+            IOrderedQueryable<EmployeeRate> ordered = filter.SortField switch
             {
-                "EmployeeName" => filter.SortDirection == "asc"
-                    ? query.OrderBy(er => er.Employee.LastName)
-                    : query.OrderByDescending(er => er.Employee.LastName),
-                "Rate" => filter.SortDirection == "asc" ? query.OrderBy(er => er.Rate) : query.OrderByDescending(er => er.Rate),
-                "EndDate" => filter.SortDirection == "asc" ? query.OrderBy(er => er.EndDate) : query.OrderByDescending(er => er.EndDate),
-                _ => filter.SortDirection == "asc" ? query.OrderBy(er => er.StartDate) : query.OrderByDescending(er => er.StartDate),
+                "EmployeeName" => asc
+                    ? query.OrderBy(er => er.Employee.LastName).ThenBy(er => er.Employee.FirstName)
+                    : query.OrderByDescending(er => er.Employee.LastName).ThenByDescending(er => er.Employee.FirstName),
+                "Rate" => asc
+                    ? query.OrderBy(er => er.Rate).ThenBy(er => er.Employee.LastName).ThenBy(er => er.Employee.FirstName)
+                    : query.OrderByDescending(er => er.Rate).ThenBy(er => er.Employee.LastName).ThenBy(er => er.Employee.FirstName),
+                "EndDate" => asc
+                    ? query.OrderBy(er => er.EndDate).ThenBy(er => er.Employee.LastName).ThenBy(er => er.Employee.FirstName)
+                    : query.OrderByDescending(er => er.EndDate).ThenBy(er => er.Employee.LastName).ThenBy(er => er.Employee.FirstName),
+                _ => asc
+                    ? query.OrderBy(er => er.StartDate).ThenBy(er => er.Employee.LastName).ThenBy(er => er.Employee.FirstName)
+                    : query.OrderByDescending(er => er.StartDate).ThenBy(er => er.Employee.LastName).ThenBy(er => er.Employee.FirstName),
             };
+
+            if (filter.SortField == "EmployeeName")
+                ordered = ordered.ThenByDescending(er => er.StartDate);
+
+            query = ordered.ThenBy(er => er.ObjectID);
 
             var page = await query
                 .Skip((filter.Page - 1) * filter.PageSize)
@@ -64,7 +97,7 @@ namespace CostAccounting.Services.EmployeeRateService
                 {
                     ObjectID = er.ObjectID,
                     EmployeeObjectId = er.EmployeeObjectId,
-                    EmployeeName = er.Employee.FirstName + " "  + er.Employee.LastName,
+                    EmployeeName = er.Employee.FirstName + " " + er.Employee.LastName,
                     EmployeeCode = er.Employee.Code,
                     StartDate = er.StartDate,
                     EndDate = er.EndDate,
@@ -165,71 +198,99 @@ namespace CostAccounting.Services.EmployeeRateService
             return (true, $"{objectIds.Count} employee rate(s) updated.");
         }
 
-        // "Almost every employee" gets a flat +/-10% seasonal swing: end the current rate row
-        // the day before effectiveDate, start a new one at the adjusted amount. Increase and
-        // decrease are independent flat 10% moves (not a perfect round-trip — 1.10 * 0.90 =
-        // 0.99, not 1.00 — which matches "goes up 10% ... goes back down 10%" as written
-        // rather than assuming they must net out to the original number).
+        // Seasonal : multiplies Rate only; the new row runs startDate..endDate.
+        // Annual   : multiplies Rate AND BaseRate; the new row starts on startDate and is open-ended.
+        // In both cases the rate in effect the day before startDate is end-dated that day, and the
+        // new row is added. Whether it shows as Current/Scheduled/Ended is decided by its dates
+        // (see EmployeeRateVM.IsCurrent / IsScheduled), not by this method.
+        //   percent      : 10 = the standard seasonal swing; any other value = custom percentage.
+        //   selectedOnly : true = only employeeObjectIds are adjusted (never falls back to everyone).
+        // Increase and decrease are independent moves (not a perfect round-trip: 1.10 * 0.90 = 0.99).
         public async Task<(bool Success, string Message)> ApplySeasonalAdjustmentAsync(
-    bool isIncrease, DateTime effectiveDate, List<int> employeeObjectIds,
-    bool selectedOnly, decimal percent, string enteredByUser)
-{
-    if (percent <= 0 || percent > 100 || (!isIncrease && percent >= 100))
-        return (false, "Percentage must be greater than 0 (and less than 100 for a decrease).");
+            bool isSeasonal, bool isIncrease, DateTime startDate, DateTime? endDate,
+            List<int> employeeObjectIds, bool selectedOnly, decimal percent, string enteredByUser)
+        {
+            if (percent <= 0 || percent > 100 || (!isIncrease && percent >= 100))
+                return (false, "Percentage must be greater than 0 (and less than 100 for a decrease).");
 
-    if (selectedOnly && (employeeObjectIds == null || !employeeObjectIds.Any()))
-        return (false, "No employees were selected.");
+            if (selectedOnly && (employeeObjectIds == null || !employeeObjectIds.Any()))
+                return (false, "No employees were selected.");
 
-    var multiplier = isIncrease ? 1m + percent / 100m : 1m - percent / 100m;
+            startDate = startDate.Date;
+            if (isSeasonal)
+            {
+                if (!endDate.HasValue)
+                    return (false, "A seasonal adjustment requires an end date.");
+                if (endDate.Value.Date < startDate)
+                    return (false, "End date must be on or after the start date.");
+            }
+            DateTime? newEndDate = isSeasonal ? endDate.Value.Date : (DateTime?)null;
+            var dayBefore = startDate.AddDays(-1);
+            var multiplier = isIncrease ? 1m + percent / 100m : 1m - percent / 100m;
 
-            // Same anti-Contains() workaround as BulkEndDateAsync: fetch everything currently
-            // active/current in one shot, then filter to the target employee set in memory
-            // rather than pushing a Contains() list into the SQL translation.
-            var allCurrentRates = await _context.EmployeeRates
-                .Where(er => !er.Deleted && (er.EndDate == null || er.EndDate >= effectiveDate))
+            // Same anti-Contains() workaround as before: fetch broadly, filter in memory.
+            var candidates = await _context.EmployeeRates
+                .Where(er => !er.Deleted && (er.EndDate == null || er.EndDate >= dayBefore))
                 .Include(er => er.Employee)
                 .ToListAsync();
 
-            var targetSet = selectedOnly ? new HashSet<int>(employeeObjectIds) : null; // null means "everyone active with a current rate"
+            var targetSet = selectedOnly ? new HashSet<int>(employeeObjectIds) : null; // null = everyone active
 
-            var currentRatesByEmployee = allCurrentRates
+            var eligible = candidates
                 .Where(er => !er.Employee.Deleted && er.Employee.Active)
                 .Where(er => targetSet == null || targetSet.Contains(er.EmployeeObjectId))
-                .GroupBy(er => er.EmployeeObjectId)
-                .Select(g => g.OrderByDescending(er => er.StartDate).First())
-                // Idempotency guard: if an employee's "current" rate already starts on
-                // effectiveDate, they were already adjusted for this date (either by an
-                // earlier run today, or a manual re-click) — skip them rather than stacking
-                // a second adjustment on the same day. This is what makes it safe for the
-                // automatic daily background check to call this repeatedly without
-                // double-applying.
-                .Where(er => er.StartDate != effectiveDate)
                 .ToList();
 
-            if (!currentRatesByEmployee.Any())
-                return (true, $"No employees required adjustment for {effectiveDate:MM/dd/yyyy} (already applied, or no eligible employees).");
+            // Idempotency guard: anyone who already has a rate starting on startDate was adjusted
+            // already (earlier run, manual re-click, or the daily background check) — skip them.
+            var alreadyApplied = eligible
+                .Where(er => er.StartDate.Date == startDate)
+                .Select(er => er.EmployeeObjectId)
+                .ToHashSet();
 
-            foreach (var oldRate in currentRatesByEmployee)
+            // Source rate = the rate in effect the day before the new one starts.
+            var sources = eligible
+                .Where(er => !alreadyApplied.Contains(er.EmployeeObjectId))
+                .Where(er => er.StartDate.Date <= dayBefore &&
+                             (er.EndDate == null || er.EndDate.Value.Date >= dayBefore))
+                .GroupBy(er => er.EmployeeObjectId)
+                .Select(g => g.OrderByDescending(er => er.StartDate).First())
+                .ToList();
+
+            var label = isSeasonal ? "Seasonal" : "Annual";
+
+            if (!sources.Any())
+                return (true, $"No employees required a {label.ToLower()} adjustment for {startDate:MM/dd/yyyy} (already applied, or no eligible employees).");
+
+            foreach (var oldRate in sources)
             {
-                oldRate.EndDate = effectiveDate.AddDays(-1);
+                oldRate.EndDate = dayBefore;
 
-                var newRate = new EmployeeRate
+                _context.EmployeeRates.Add(new EmployeeRate
                 {
                     EmployeeObjectId = oldRate.EmployeeObjectId,
-                    StartDate = effectiveDate,
-                    EndDate = null,
+                    StartDate = startDate,
+                    EndDate = newEndDate,
                     Rate = Math.Round(oldRate.Rate * multiplier, 2),
-                    BaseRate = oldRate.BaseRate,
+                    BaseRate = isSeasonal
+                        ? oldRate.BaseRate
+                        : (oldRate.BaseRate.HasValue
+                            ? Math.Round(oldRate.BaseRate.Value * multiplier, 2)
+                            : (decimal?)null),
                     EnteredByUser = enteredByUser,
                     EnteredDate = DateTime.Now,
                     Deleted = false
-                };
-                _context.EmployeeRates.Add(newRate);
+                });
             }
 
             await _context.SaveChangesAsync();
+
             var direction = isIncrease ? "increased" : "decreased";
-            return (true, $"Rates {direction} {percent:0.##}% for {currentRatesByEmployee.Count} employee(s), effective {effectiveDate:MM/dd/yyyy}.");
+            var what = isSeasonal ? "Rates" : "Rates and base rates";
+            var range = isSeasonal
+                ? $"{startDate:MM/dd/yyyy} – {newEndDate:MM/dd/yyyy}"
+                : $"effective {startDate:MM/dd/yyyy}";
+            return (true, $"{label}: {what} {direction} {percent:0.##}% for {sources.Count} employee(s), {range}.");
         }
     }
 }

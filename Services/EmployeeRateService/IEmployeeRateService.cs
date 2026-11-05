@@ -1,6 +1,5 @@
 using CostAccounting.Models;
 
-
 namespace CostAccounting.Services.EmployeeRateService
 {
     public interface IEmployeeRateService
@@ -10,10 +9,10 @@ namespace CostAccounting.Services.EmployeeRateService
         Task<(bool Success, string Message)> CreateAsync(EmployeeRateVM vm, string enteredByUser);
         Task<(bool Success, string Message)> UpdateAsync(EmployeeRateVM vm, string enteredByUser);
         Task<(bool Success, string Message)> SoftDeleteAsync(int objectId);
-        Task<(bool Success, string Message)> BulkEndDateAsync(List<int> objectIds, System.DateTime endDate);
+        Task<(bool Success, string Message)> BulkEndDateAsync(List<int> objectIds, DateTime endDate);
 
         Task<(bool Success, string Message)> ApplySeasonalAdjustmentAsync(
-    bool isIncrease, DateTime effectiveDate, List<int> employeeObjectIds,
-    bool selectedOnly, decimal percent, string enteredByUser);
+            bool isSeasonal, bool isIncrease, DateTime startDate, DateTime? endDate,
+            List<int> employeeObjectIds, bool selectedOnly, decimal percent, string enteredByUser);
     }
 }
